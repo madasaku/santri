@@ -1,5 +1,5 @@
 // GANTI DENGAN URL WEB APP GAS ANDA
-const API_URL = 'https://script.google.com/macros/s/AKfycbysuBkSkZX-qH2vttPddMO0HHjpRw6jr7Ul_9Hu5HUmP-2jjsy3cNUiA7UPL1t0ZeSg9w/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwmfh6Zsjz-DML5YbERzw80fhcwisqjotfkYE7yRx_7gQechv5O2qQZatyVpghxxIvesg/exec';
 let appData = null;
 
 // Pendaftaran Service Worker untuk PWA
