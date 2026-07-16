@@ -906,6 +906,31 @@ async function prosesSimpanPengeluaran() {
   const nominal = Number(document.getElementById('swal-nominal-keluar').value.replace(/\./g, ''));
   const keterangan = document.getElementById('swal-ket-keluar').value;
 
+  // ==========================================
+  // VALIDASI SALDO (MENCEGAH MINUS)
+  // ==========================================
+  if (appData && appData.statistik) {
+    let saldoTersedia = 0;
+    
+    // Hitung saldo riil saat ini berdasarkan kategori yang dipilih
+    if (kategori === "Uang Ujian") {
+      saldoTersedia = (appData.statistik.pemasukanUjian || 0) - (appData.statistik.pengeluaranUjian || 0);
+    } else if (kategori === "Uang Rapor") {
+      saldoTersedia = (appData.statistik.pemasukanRapor || 0) - (appData.statistik.pengeluaranRapor || 0);
+    }
+
+    // Jika nominal pengeluaran lebih besar dari saldo yang ada, blokir!
+    if (nominal > saldoTersedia) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Saldo Tidak Cukup!',
+        html: `Saldo Kas <b>${kategori}</b> saat ini hanya <b>Rp ${saldoTersedia.toLocaleString('id-ID')}</b>.<br>Penarikan dibatalkan agar kas tidak minus.`
+      });
+      return; // Hentikan kode agar data tidak terkirim ke server
+    }
+  }
+  // ==========================================
+
   const payload = {
     action: 'simpan_pengeluaran',
     data: { kategori: kategori, nominal: nominal, keterangan: keterangan }
