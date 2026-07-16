@@ -2,6 +2,45 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycbwSIp-7aT6zrG-32qWpSxfmR8K4OeWFhuVgvEY42io8IKFEO2ASWCICWwmTnxFOz49YVw/exec';
 let appData = null;
 
+
+// ==========================================
+// SINKRONISASI TOMBOL KEMBALI (BACK) ANDROID
+// ==========================================
+
+// 1. Tangkap aksi tombol fisik Back pada HP
+window.addEventListener('popstate', (e) => {
+  // Jika ada popup SweetAlert terbuka, tutup popup-nya (jangan keluar aplikasi)
+  if (Swal.isVisible()) {
+    Swal.close();
+  } 
+  // Jika tidak ada popup, tapi pengguna berada di menu lain, kembalikan ke Beranda
+  else if (e.state && e.state.page) {
+    if (e.state.page === 'dashboard') renderDashboard(true);
+    else if (e.state.page === 'pembayaran') renderPembayaran(null, true);
+    else if (e.state.page === 'laporan') renderLaporan('Uang Ujian', true);
+    else if (e.state.page === 'setting') renderSetting(true);
+  } 
+  // Jika tidak ada state, kembalikan ke beranda secara default
+  else {
+    renderDashboard(true);
+  }
+});
+
+// 2. Override (Modifikasi) Swal.fire bawaan
+const nativeSwalFire = Swal.fire;
+Swal.fire = function(...args) {
+  // Saat popup terbuka, tambahkan 1 riwayat kosong agar tombol back HP tidak keluar web
+  history.pushState({ popup: true }, null, location.href);
+  
+  return nativeSwalFire.apply(this, args).then((result) => {
+    // Jika popup ditutup lewat tombol layar (bukan tombol fisik Back), bersihkan riwayat
+    if (history.state && history.state.popup) {
+      history.back(); 
+    }
+    return result;
+  });
+};
+
 // Pendaftaran Service Worker untuk PWA
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js')
@@ -11,6 +50,9 @@ if ('serviceWorker' in navigator) {
 
 // Fetch Data saat aplikasi dimuat
 window.onload = async () => {
+  // Tambahkan baris ini untuk mencatat state beranda saat pertama kali dibuka
+  history.replaceState({ page: 'dashboard' }, "", "#beranda");
+  
   try {
     const response = await fetch(API_URL);
     appData = await response.json();
@@ -20,7 +62,10 @@ window.onload = async () => {
   }
 };
 
-function renderDashboard() {
+function renderDashboard(isBack = false) {
+  // Tambahkan baris ini
+  if (!isBack) history.pushState({ page: 'dashboard' }, "", "#beranda");
+  
   updateNav(0);
   if (!appData) return;
   
@@ -68,12 +113,14 @@ function renderDashboard() {
 // ==========================================
 let filterTingkat = 'Semua';
 
-function renderPembayaran(filterManual = null) {
+function renderPembayaran(filterManual = null, isBack = false) {
+  // Tambahkan baris ini
+  if (!isBack) history.pushState({ page: 'pembayaran' }, "", "#santri");
+  
   updateNav(1);
   if (!appData) return;
   if (filterManual) filterTingkat = filterManual; 
   
-  // 1. Ekstrak semua nama kelas spesifik secara otomatis dari data
   const uniqueClasses = [...new Set(appData.santri.map(s => s.kelas))].sort();
 
   // 2. Terapkan Filter
@@ -492,7 +539,10 @@ async function kirimDataImportKeServer(dataSantri) {
 // ==========================================
 // FITUR LAPORAN & GRAFIK
 // ==========================================
-function renderLaporan(tabAktif = 'Uang Ujian') {
+function renderLaporan(tabAktif = 'Uang Ujian', isBack = false) {
+  // Tambahkan baris ini
+  if (!isBack) history.pushState({ page: 'laporan' }, "", "#laporan");
+  
   updateNav(3); 
   if (!appData) return;
 
@@ -629,7 +679,10 @@ function getPengaturanBiaya() {
   };
 }
 
-function renderSetting() {
+function renderSetting(isBack = false) {
+  // Tambahkan baris ini
+  if (!isBack) history.pushState({ page: 'setting' }, "", "#pengaturan");
+  
   updateNav(4); 
   const setting = getPengaturanBiaya();
   
