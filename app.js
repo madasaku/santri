@@ -6,35 +6,40 @@ let appData = null;
 // ==========================================
 // SINKRONISASI TOMBOL KEMBALI (BACK) ANDROID
 // ==========================================
+let popupTerbuka = 0;
 
-// 1. Tangkap aksi tombol fisik Back pada HP
+// 1. Deteksi Tombol Fisik Back HP
 window.addEventListener('popstate', (e) => {
-  // Jika ada popup SweetAlert terbuka, tutup popup-nya (jangan keluar aplikasi)
-  if (Swal.isVisible()) {
-    Swal.close();
-  } 
-  // Jika tidak ada popup, tapi pengguna berada di menu lain, kembalikan ke Beranda
-  else if (e.state && e.state.page) {
+  // A. Jika ada SweetAlert terbuka, tutup saja popupnya
+  if (document.body.classList.contains('swal2-shown')) {
+    Swal.close(); 
+    return; // PENTING: Wajib ada return agar halaman belakangnya tidak termuat ulang
+  }
+  
+  // B. Jika tidak ada popup, navigasi ke menu sebelumnya
+  if (e.state && e.state.page) {
     if (e.state.page === 'dashboard') renderDashboard(true);
     else if (e.state.page === 'pembayaran') renderPembayaran(null, true);
     else if (e.state.page === 'laporan') renderLaporan('Uang Ujian', true);
     else if (e.state.page === 'setting') renderSetting(true);
-  } 
-  // Jika tidak ada state, kembalikan ke beranda secara default
-  else {
+  } else {
     renderDashboard(true);
   }
 });
 
-// 2. Override (Modifikasi) Swal.fire bawaan
+// 2. Override (Modifikasi) Swal.fire agar tahan terhadap popup beruntun
 const nativeSwalFire = Swal.fire;
 Swal.fire = function(...args) {
-  // Saat popup terbuka, tambahkan 1 riwayat kosong agar tombol back HP tidak keluar web
-  history.pushState({ popup: true }, null, location.href);
+  // Hanya buat histori palsu jika ini adalah popup PERTAMA yang muncul di layar
+  if (popupTerbuka === 0) {
+    history.pushState({ isPopup: true }, "", location.hash || "#");
+  }
+  popupTerbuka++;
   
   return nativeSwalFire.apply(this, args).then((result) => {
-    // Jika popup ditutup lewat tombol layar (bukan tombol fisik Back), bersihkan riwayat
-    if (history.state && history.state.popup) {
+    popupTerbuka--;
+    // Jika semua popup sudah beres dan ditutup lewat tombol (bukan lewat tombol back HP)
+    if (popupTerbuka === 0 && history.state && history.state.isPopup) {
       history.back(); 
     }
     return result;
@@ -50,13 +55,16 @@ if ('serviceWorker' in navigator) {
 
 // Fetch Data saat aplikasi dimuat
 window.onload = async () => {
-  // Tambahkan baris ini untuk mencatat state beranda saat pertama kali dibuka
+  // Mencatat state beranda pertama kali
   history.replaceState({ page: 'dashboard' }, "", "#beranda");
   
   try {
     const response = await fetch(API_URL);
     appData = await response.json();
-    renderDashboard();
+    
+    // UBAH BARIS INI: Tambahkan kata "true" di dalam kurung
+    renderDashboard(true); 
+    
   } catch (error) {
     Swal.fire('Error', 'Gagal memuat data dari server. Periksa koneksi Anda.', 'error');
   }
@@ -680,7 +688,6 @@ function getPengaturanBiaya() {
 }
 
 function renderSetting(isBack = false) {
-  // Tambahkan baris ini
   if (!isBack) history.pushState({ page: 'setting' }, "", "#pengaturan");
   
   updateNav(4); 
@@ -697,20 +704,20 @@ function renderSetting(isBack = false) {
         
         <h3 class="text-sm font-bold text-gray-700 mt-4 mb-2 bg-emerald-50 p-2 rounded-lg"><i class="fas fa-child text-emerald-600 mr-2"></i> Tingkat TK</h3>
         <div class="grid grid-cols-2 gap-3 mb-2">
-          <div><label class="text-[10px] font-bold text-gray-400 uppercase">Uang Ujian</label><input type="number" id="set_tk_ujian" value="${setting.tk_ujian}" class="w-full mt-1 border rounded-xl p-2 text-sm bg-gray-50"></div>
-          <div><label class="text-[10px] font-bold text-gray-400 uppercase">Uang Rapor</label><input type="number" id="set_tk_rapor" value="${setting.tk_rapor}" class="w-full mt-1 border rounded-xl p-2 text-sm bg-gray-50"></div>
+          <div><label class="text-[10px] font-bold text-gray-400 uppercase">Uang Ujian</label><input type="text" id="set_tk_ujian" value="${setting.tk_ujian.toLocaleString('id-ID')}" oninput="formatRupiah(this)" class="w-full mt-1 border rounded-xl p-2 text-sm bg-gray-50 font-bold text-teal-600"></div>
+          <div><label class="text-[10px] font-bold text-gray-400 uppercase">Uang Rapor</label><input type="text" id="set_tk_rapor" value="${setting.tk_rapor.toLocaleString('id-ID')}" oninput="formatRupiah(this)" class="w-full mt-1 border rounded-xl p-2 text-sm bg-gray-50 font-bold text-teal-600"></div>
         </div>
 
         <h3 class="text-sm font-bold text-gray-700 mt-6 mb-2 bg-blue-50 p-2 rounded-lg"><i class="fas fa-book-reader text-blue-600 mr-2"></i> Tingkat Ibtidaiyah (IBT)</h3>
         <div class="grid grid-cols-2 gap-3 mb-2">
-          <div><label class="text-[10px] font-bold text-gray-400 uppercase">Uang Ujian</label><input type="number" id="set_ibt_ujian" value="${setting.ibt_ujian}" class="w-full mt-1 border rounded-xl p-2 text-sm bg-gray-50"></div>
-          <div><label class="text-[10px] font-bold text-gray-400 uppercase">Uang Rapor</label><input type="number" id="set_ibt_rapor" value="${setting.ibt_rapor}" class="w-full mt-1 border rounded-xl p-2 text-sm bg-gray-50"></div>
+          <div><label class="text-[10px] font-bold text-gray-400 uppercase">Uang Ujian</label><input type="text" id="set_ibt_ujian" value="${setting.ibt_ujian.toLocaleString('id-ID')}" oninput="formatRupiah(this)" class="w-full mt-1 border rounded-xl p-2 text-sm bg-gray-50 font-bold text-teal-600"></div>
+          <div><label class="text-[10px] font-bold text-gray-400 uppercase">Uang Rapor</label><input type="text" id="set_ibt_rapor" value="${setting.ibt_rapor.toLocaleString('id-ID')}" oninput="formatRupiah(this)" class="w-full mt-1 border rounded-xl p-2 text-sm bg-gray-50 font-bold text-teal-600"></div>
         </div>
 
         <h3 class="text-sm font-bold text-gray-700 mt-6 mb-2 bg-orange-50 p-2 rounded-lg"><i class="fas fa-user-graduate text-orange-600 mr-2"></i> Tingkat Sanawiyah (SANA)</h3>
         <div class="grid grid-cols-2 gap-3 mb-4">
-          <div><label class="text-[10px] font-bold text-gray-400 uppercase">Uang Ujian</label><input type="number" id="set_sana_ujian" value="${setting.sana_ujian}" class="w-full mt-1 border rounded-xl p-2 text-sm bg-gray-50"></div>
-          <div><label class="text-[10px] font-bold text-gray-400 uppercase">Uang Rapor</label><input type="number" id="set_sana_rapor" value="${setting.sana_rapor}" class="w-full mt-1 border rounded-xl p-2 text-sm bg-gray-50"></div>
+          <div><label class="text-[10px] font-bold text-gray-400 uppercase">Uang Ujian</label><input type="text" id="set_sana_ujian" value="${setting.sana_ujian.toLocaleString('id-ID')}" oninput="formatRupiah(this)" class="w-full mt-1 border rounded-xl p-2 text-sm bg-gray-50 font-bold text-teal-600"></div>
+          <div><label class="text-[10px] font-bold text-gray-400 uppercase">Uang Rapor</label><input type="text" id="set_sana_rapor" value="${setting.sana_rapor.toLocaleString('id-ID')}" oninput="formatRupiah(this)" class="w-full mt-1 border rounded-xl p-2 text-sm bg-gray-50 font-bold text-teal-600"></div>
         </div>
 
         <button onclick="simpanSettingBiaya()" class="w-full bg-emerald-600 text-white font-bold py-3 rounded-2xl hover:bg-emerald-700 transition shadow-md mt-2">
@@ -726,12 +733,12 @@ async function simpanSettingBiaya() {
   const payload = {
     action: 'simpan_setting',
     data: {
-      tk_ujian: Number(document.getElementById('set_tk_ujian').value),
-      tk_rapor: Number(document.getElementById('set_tk_rapor').value),
-      ibt_ujian: Number(document.getElementById('set_ibt_ujian').value),
-      ibt_rapor: Number(document.getElementById('set_ibt_rapor').value),
-      sana_ujian: Number(document.getElementById('set_sana_ujian').value),
-      sana_rapor: Number(document.getElementById('set_sana_rapor').value),
+      tk_ujian: Number(document.getElementById('set_tk_ujian').value.replace(/\./g, '')),
+      tk_rapor: Number(document.getElementById('set_tk_rapor').value.replace(/\./g, '')),
+      ibt_ujian: Number(document.getElementById('set_ibt_ujian').value.replace(/\./g, '')),
+      ibt_rapor: Number(document.getElementById('set_ibt_rapor').value.replace(/\./g, '')),
+      sana_ujian: Number(document.getElementById('set_sana_ujian').value.replace(/\./g, '')),
+      sana_rapor: Number(document.getElementById('set_sana_rapor').value.replace(/\./g, '')),
     }
   };
   
