@@ -83,10 +83,12 @@ function renderPembayaran(filterManual = null) {
     dataSantri = dataSantri.filter(s => s.kelas.toUpperCase().includes(filterTingkat.toUpperCase()));
   }
 
-  const listHTML = dataSantri.map(s => `
+const listHTML = dataSantri.map((s, index) => `
     <div class="santri-card bg-white p-4 rounded-3xl shadow-sm border border-gray-100 mb-3 flex justify-between items-center hover:bg-gray-50 transition cursor-pointer" onclick="bukaFormPembayaran('${s.nama}', '${s.kelas}')">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-500"><i class="fas fa-user"></i></div>
+        <div class="w-10 h-10 min-w-[40px] bg-teal-50 rounded-full flex items-center justify-center text-teal-600 font-bold text-sm border border-teal-100">
+          ${index + 1}
+        </div>
         <div>
           <h4 class="font-bold text-sm">${s.nama}</h4>
           <p class="text-xs text-gray-500">${s.nis} • ${s.kelas}</p>
@@ -101,7 +103,7 @@ function renderPembayaran(filterManual = null) {
   `).join('');
 
   document.getElementById('app-content').innerHTML = `
-    <div class="max-w-2xl mx-auto fade-in pb-20 pt-2 px-2">
+   <div class="max-w-2xl mx-auto pb-20 pt-4 px-7">
       <div class="relative mb-4">
         <select onchange="renderPembayaran(this.value)" class="w-full bg-white border border-gray-100 shadow-sm rounded-2xl px-4 py-3 text-sm font-bold text-gray-700 outline-none focus:border-emerald-500 appearance-none cursor-pointer">
           <option value="Semua" ${filterTingkat === 'Semua' ? 'selected' : ''}>📋 Semua Data Santri</option>
@@ -161,8 +163,9 @@ function bukaFormPembayaran(nama = '', kelas = '') {
           <option value="Uang Ujian">Uang Ujian</option>
           <option value="Uang Rapor">Uang Rapor</option>
         </select>
+        
         <label class="block text-xs font-bold mb-1">Nominal</label>
-        <input id="swal-nominal" type="number" class="w-full border rounded-xl p-2 mb-3 text-sm" placeholder="Contoh: 150000">
+        <input id="swal-nominal" type="text" class="w-full border rounded-xl p-2 mb-3 text-sm font-bold text-teal-600" placeholder="Contoh: 10.000" oninput="formatRupiah(this)">
       </div>
     `,
     showCancelButton: true,
@@ -175,14 +178,23 @@ function bukaFormPembayaran(nama = '', kelas = '') {
   });
 }
 
+// Fungsi ini bekerja real-time mendeteksi setiap ketikan keyboard
+function formatRupiah(input) {
+  // Hapus semua huruf/simbol, sisakan angka saja
+  let angka = input.value.replace(/[^0-9]/g, '');
+  // Tambahkan titik setiap 3 digit
+  input.value = angka.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+}
+
 // ==========================================
 // FUNGSI SIMPAN DATA (DENGAN AUTO-REFRESH & VALIDASI)
 // ==========================================
 async function simpanData() {
-  const namaInput = document.getElementById('swal-nama').value;
-  const kelasInput = document.getElementById('swal-kelas').value;
-  const jenisInput = document.getElementById('swal-jenis').value;
-  const nominalInput = Number(document.getElementById('swal-nominal').value);
+  // Gunakan optional chaining (?.) agar tidak error jika elemen tidak ada
+  const namaInput = document.getElementById('swal-nama')?.value;
+  const kelasInput = document.getElementById('swal-kelas')?.value;
+  const jenisInput = document.getElementById('swal-jenis')?.value;
+  const nominalInput = Number(document.getElementById('swal-nominal')?.value.replace(/\./g, ''));
 
   if (appData && appData.pembayaran) {
     const setting = getPengaturanBiaya();
@@ -508,7 +520,7 @@ function renderLaporan(tabAktif = 'Uang Ujian') {
   const persentase = totalTarget === 0 ? 0 : Math.round((totalMasuk / totalTarget) * 100);
 
 document.getElementById('app-content').innerHTML = `
-    <div class="max-w-2xl mx-auto pb-12 pt-2 px-2">
+<div class="max-w-2xl mx-auto pb-12 pt-4 px-7">
       <div class="flex bg-gray-200/70 p-1.5 rounded-2xl mb-6 shadow-inner">
         <button onclick="renderLaporan('Uang Ujian')" class="flex-1 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 ${tabAktif === 'Uang Ujian' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}">Ujian</button>
         <button onclick="renderLaporan('Uang Rapor')" class="flex-1 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 ${tabAktif === 'Uang Rapor' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}">Rapor</button>
@@ -622,8 +634,8 @@ function renderSetting() {
   const setting = getPengaturanBiaya();
   
   const html = `
-    <div class="max-w-2xl mx-auto fade-in pb-24 pt-2 px-2">
-      <h2 class="text-lg font-bold text-gray-800 mb-4 px-2 flex items-center gap-2">
+   <div class="max-w-2xl mx-auto pb-24 pt-4 px-7">
+    <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
         <i class="fas fa-sliders-h text-emerald-500"></i> Pengaturan Biaya
       </h2>
       
@@ -698,4 +710,84 @@ async function simpanSettingBiaya() {
   } catch (error) {
     Swal.fire('Gagal Terkirim', 'Error: ' + error.message, 'error');
   }
+}
+
+// ==========================================
+// FUNGSI TRANSAKSI CEPAT (TOMBOL PLUS)
+// ==========================================
+function bukaTransaksiCepat() {
+  if (!appData || !appData.santri) return;
+
+  // 1. Ekstrak daftar kelas yang ada di database
+  const uniqueClasses = [...new Set(appData.santri.map(s => s.kelas))].sort();
+  let optionsKelas = '<option value="" disabled selected>-- Pilih Kelas --</option>';
+  uniqueClasses.forEach(c => {
+    optionsKelas += `<option value="${c}">${c}</option>`;
+  });
+
+  // 2. Tampilkan Pop-up
+  Swal.fire({
+    title: 'Transaksi Cepat',
+    html: `
+      <div class="text-left mt-2">
+        <label class="block text-xs font-bold mb-1">Pilih Kelas</label>
+        <select id="swal-kelas" class="w-full border rounded-xl p-2 mb-3 bg-white text-sm cursor-pointer" onchange="updateDropdownSantri(this.value)">
+          ${optionsKelas}
+        </select>
+        
+        <label class="block text-xs font-bold mb-1">Nama Santri</label>
+        <select id="swal-nama" class="w-full border rounded-xl p-2 mb-3 bg-gray-100 text-sm cursor-not-allowed" disabled>
+          <option value="">Pilih kelas terlebih dahulu...</option>
+        </select>
+        
+        <label class="block text-xs font-bold mb-1">Jenis Pembayaran</label>
+        <select id="swal-jenis" class="w-full border rounded-xl p-2 mb-3 bg-white text-sm cursor-pointer">
+          <option value="Uang Ujian">Uang Ujian</option>
+          <option value="Uang Rapor">Uang Rapor</option>
+        </select>
+        
+        <label class="block text-xs font-bold mb-1">Nominal</label>
+        <input id="swal-nominal" type="text" class="w-full border rounded-xl p-2 mb-3 text-sm font-bold text-teal-600" placeholder="Contoh: 150.000" oninput="formatRupiah(this)">
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: 'Simpan',
+    confirmButtonColor: '#0d9488', // Warna teal-600
+    position: 'bottom',
+    customClass: { popup: 'rounded-t-3xl' },
+    preConfirm: () => {
+      // Validasi agar tidak bisa simpan kalau form masih kosong
+      if (!document.getElementById('swal-kelas').value || !document.getElementById('swal-nama').value || !document.getElementById('swal-nominal').value) {
+        Swal.showValidationMessage('Harap lengkapi Kelas, Nama Santri, dan Nominal!');
+        return false;
+      }
+    }
+  }).then((result) => {
+    // Karena ID inputnya sengaja disamakan (swal-nama, swal-kelas, dll),
+    // kita bisa langsung menggunakan fungsi simpanData() bawaan Anda!
+    if (result.isConfirmed) simpanData();
+  });
+}
+
+// ==========================================
+// FUNGSI PENDUKUNG: FILTER NAMA SANTRI OTOMATIS
+// ==========================================
+function updateDropdownSantri(kelasTerpilih) {
+  const selectNama = document.getElementById('swal-nama');
+  
+  // Saring santri yang hanya ada di kelas terpilih, lalu urutkan sesuai abjad
+  const santriFilter = appData.santri
+    .filter(s => s.kelas === kelasTerpilih)
+    .sort((a, b) => a.nama.localeCompare(b.nama));
+  
+  // Kosongkan dan isi ulang pilihan nama
+  selectNama.innerHTML = '<option value="" disabled selected>-- Pilih Nama Santri --</option>';
+  santriFilter.forEach(s => {
+    selectNama.innerHTML += `<option value="${s.nama}">${s.nama}</option>`;
+  });
+  
+  // Nyalakan kotak input (hapus blokir disabled)
+  selectNama.disabled = false;
+  selectNama.classList.remove('bg-gray-100', 'cursor-not-allowed');
+  selectNama.classList.add('bg-white', 'cursor-pointer');
 }
