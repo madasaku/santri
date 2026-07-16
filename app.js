@@ -138,8 +138,15 @@ function renderPembayaran(filterManual = null, isBack = false) {
     dataSantri = dataSantri.filter(s => s.kelas.toUpperCase().includes(filterTingkat.toUpperCase()));
   }
 
-const listHTML = dataSantri.map((s, index) => `
-    <div class="santri-card bg-white p-4 rounded-3xl shadow-sm border border-gray-100 mb-3 flex justify-between items-center hover:bg-gray-50 transition cursor-pointer" onclick="bukaFormPembayaran('${s.nama}', '${s.kelas}')">
+// PERBAIKAN: Gunakan kurung kurawal agar bisa memanipulasi string
+  const listHTML = dataSantri.map((s, index) => {
+    
+    // Mengamankan tanda kutip agar tidak memotong kode JavaScript
+    const namaAman = s.nama.replace(/'/g, "\\'");
+    const kelasAman = s.kelas.replace(/'/g, "\\'");
+    
+    return `
+    <div class="santri-card bg-white p-4 rounded-3xl shadow-sm border border-gray-100 mb-3 flex justify-between items-center hover:bg-gray-50 transition cursor-pointer" onclick="bukaFormPembayaran('${namaAman}', '${kelasAman}')">
       <div class="flex items-center gap-3">
         <div class="w-10 h-10 min-w-[40px] bg-teal-50 rounded-full flex items-center justify-center text-teal-600 font-bold text-sm border border-teal-100">
           ${index + 1}
@@ -150,12 +157,12 @@ const listHTML = dataSantri.map((s, index) => `
         </div>
       </div>
       
-      <button onclick="lihatRiwayat('${s.nama}', event)" class="text-[10px] bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full font-bold border border-blue-100 hover:bg-blue-500 hover:text-white transition-colors shadow-sm flex items-center gap-1 z-10">
+      <button onclick="lihatRiwayat('${namaAman}', event)" class="text-[10px] bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full font-bold border border-blue-100 hover:bg-blue-500 hover:text-white transition-colors shadow-sm flex items-center gap-1 z-10">
         <i class="fas fa-history"></i> Riwayat
       </button>
       
     </div>
-  `).join('');
+  `}).join('');
 
   document.getElementById('app-content').innerHTML = `
    <div class="max-w-2xl mx-auto pb-20 pt-4 px-7">
