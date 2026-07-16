@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Sistem Pembayaran Santri</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#10b981">
+  
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script>
+    tailwind.config = {
+      theme: { 
+        extend: { 
+          fontFamily: { sans: ['Outfit', 'sans-serif'] },
+          colors: { emerald: { 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857' } }, 
+          borderRadius: { '3xl': '24px', '4xl': '32px' },
+          boxShadow: { 'soft': '0 10px 40px -10px rgba(0,0,0,0.08)' }
+        } 
+      }
+    }
+  </script>
+  
+  <style>
+    /* Reset Tap & Scrollbar */
+    * { -webkit-tap-highlight-color: transparent; }
+    body { background-color: #f3f4f6; } /* Abu-abu sangat terang untuk latar luar */
+    .hide-scroll::-webkit-scrollbar { display: none; }
+    
+    /* Animasi Halus */
+    .fade-in { animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+    @keyframes fadeIn { 
+      from { opacity: 0; transform: translateY(15px); } 
+      to { opacity: 1; transform: translateY(0); } 
+    }
+
+    /* Efek Klik pada Tombol Navigasi */
+    .nav-btn { transition: all 0.3s ease; position: relative; }
+    .nav-btn:active { transform: scale(0.9); }
+    
+    /* Mengunci ukuran aplikasi di layar besar agar terasa seperti HP */
+    .mobile-container {
+      max-width: 480px;
+      margin: 0 auto;
+      background-color: #fafaf9;
+      min-height: 100vh;
+      position: relative;
+      box-shadow: 0 0 50px rgba(0,0,0,0.05);
+    }
+  </style>
+</head>
+<body class="text-gray-800 font-sans antialiased">
+
+  <div class="mobile-container pb-24 relative shadow-soft overflow-hidden">
+
+    <header class="bg-gradient-to-r from-emerald-600 to-emerald-500 text-white p-5 pt-6 shadow-md rounded-b-[2rem] sticky top-0 z-50 relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl -mr-12 -mt-12 pointer-events-none"></div>
+      <div class="absolute bottom-0 left-0 w-24 h-24 bg-black opacity-5 rounded-full blur-xl -ml-8 -mb-8 pointer-events-none"></div>
+      
+      <div class="relative z-10 flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30 shadow-inner">
+            <i class="fas fa-wallet text-lg"></i>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold tracking-tight leading-tight">BayarSantri</h1>
+            <p class="text-[10px] text-emerald-100 font-medium tracking-widest uppercase opacity-80">Sistem Pembayaran</p>
+          </div>
+        </div>
+        <button class="w-10 h-10 rounded-full bg-emerald-700/30 flex items-center justify-center hover:bg-emerald-700/50 transition">
+          <i class="fas fa-bell text-sm"></i>
+        </button>
+      </div>
+    </header>
+
+    <main id="app-content" class="fade-in mt-2 min-h-screen">
+      <div class="animate-pulse flex flex-col gap-5 p-5">
+        <div class="h-32 bg-gray-200 rounded-4xl w-full"></div>
+        <div class="grid grid-cols-4 gap-3">
+          <div class="h-16 bg-gray-200 rounded-2xl"></div>
+          <div class="h-16 bg-gray-200 rounded-2xl"></div>
+          <div class="h-16 bg-gray-200 rounded-2xl"></div>
+          <div class="h-16 bg-gray-200 rounded-2xl"></div>
+        </div>
+        <div class="h-24 bg-gray-200 rounded-3xl w-full"></div>
+      </div>
+    </main>
+
+    <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white/80 backdrop-blur-lg border-t border-gray-100 shadow-[0_-10px_40px_rgba(0,0,0,0.06)] rounded-t-[2rem] px-6 py-4 flex justify-between items-center z-50">
+      
+      <button onclick="renderDashboard()" class="nav-btn text-emerald-600 flex flex-col items-center gap-1.5 w-14">
+        <i class="fas fa-home text-xl"></i>
+        <span class="text-[10px] font-bold">Beranda</span>
+      </button>
+      
+      <button onclick="renderPembayaran()" class="nav-btn text-gray-400 flex flex-col items-center gap-1.5 w-14 hover:text-emerald-500">
+        <i class="fas fa-users text-xl"></i>
+        <span class="text-[10px] font-bold">Santri</span>
+      </button>
+      
+      <div class="relative -top-8 mx-2">
+        <button onclick="renderPembayaran()" class="bg-gradient-to-b from-emerald-400 to-emerald-600 text-white w-14 h-14 rounded-[20px] shadow-lg shadow-emerald-200 flex items-center justify-center text-xl border-4 border-white hover:scale-105 active:scale-95 transition-all duration-300 transform rotate-45 group">
+          <i class="fas fa-plus -rotate-45 group-hover:rotate-45 transition-transform duration-300"></i>
+        </button>
+      </div>
+      
+      <button onclick="renderLaporan()" class="nav-btn text-gray-400 flex flex-col items-center gap-1.5 w-14 hover:text-emerald-500">
+        <i class="fas fa-chart-pie text-xl"></i>
+        <span class="text-[10px] font-bold">Laporan</span>
+      </button>
+      
+      <button onclick="renderSetting()" class="nav-btn text-gray-400 flex flex-col items-center gap-1.5 w-14 hover:text-emerald-500">
+  <i class="fas fa-cog text-xl"></i>
+  <span class="text-[10px] font-bold">Setting</span>
+</button>
+	  
+    </nav>
+
+  </div> <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "Sistem Pembayaran Santri",
+  "short_name": "BayarSantri",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#10b981",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/876/876778.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

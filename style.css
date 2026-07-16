@@ -1,0 +1,261 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Inter', sans-serif;
+}
+
+body {
+    background-color: #f4f7f6;
+    color: #333;
+}
+
+.app-container {
+    display: flex;
+    min-height: 100vh;
+    flex-direction: row;
+}
+
+/* Sidebar Styling */
+.sidebar {
+    width: 250px;
+    background-color: #1a5336; 
+    color: white;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+}
+
+.logo {
+    padding: 24px;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.sidebar nav {
+    display: flex;
+    flex-direction: column;
+    padding: 20px 0;
+}
+
+.nav-btn {
+    background: none;
+    border: none;
+    color: #b3d4c3;
+    padding: 15px 24px;
+    text-align: left;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.nav-btn:hover, .nav-btn.active {
+    background-color: #123e27;
+    color: white;
+    border-left: 4px solid #4ade80;
+}
+
+/* Main Content Styling */
+.content {
+    flex: 1;
+    padding: 30px;
+    overflow-y: auto;
+    width: 100%;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+header h1 {
+    font-size: 1.8rem;
+}
+
+.print-btn, .action-btn {
+    background-color: #1a5336;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.import-btn { background-color: #2563eb; }
+.refresh-btn { background-color: #4b5563; }
+
+/* Dashboard Cards */
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.card {
+    background: white;
+    padding: 24px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.card h3 {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 10px;
+}
+
+.card p {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.masuk p { color: #2563eb; }
+.keluar p { color: #dc2626; }
+.saldo p { color: #16a34a; }
+
+.hidden { display: none !important; }
+
+/* Table & Toolbar Styling */
+.toolbar {
+    background: white;
+    padding: 15px 20px;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.actions {
+    display: flex; 
+    gap: 10px; 
+    align-items: center; 
+    flex-wrap: wrap;
+}
+
+.file-input {
+    font-size: 14px;
+    padding: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: white;
+}
+
+.filter-group select {
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ccc;
+    margin-left: 10px;
+}
+
+.table-container {
+    background: white;
+    border-radius: 0 0 10px 10px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+
+th, td {
+    padding: 15px 20px;
+    text-align: left;
+    border-bottom: 1px solid #eee;
+}
+
+th {
+    background-color: #f8fafc;
+    font-weight: 600;
+    color: #475569;
+}
+
+/* =========================================
+   MEDIA QUERY: RESPONSIVE HP & TABLET
+   ========================================= */
+@media screen and (max-width: 768px) {
+    .app-container {
+        flex-direction: column;
+    }
+
+    .sidebar {
+        width: 100%;
+    }
+
+    .logo {
+        padding: 15px;
+    }
+
+    .sidebar nav {
+        flex-direction: row;
+        padding: 0;
+        justify-content: space-around;
+        border-bottom: 2px solid #123e27;
+    }
+
+    .nav-btn {
+        padding: 12px 10px;
+        text-align: center;
+        flex: 1;
+        border-left: none;
+        border-bottom: 4px solid transparent;
+        font-size: 14px;
+    }
+
+    .nav-btn:hover, .nav-btn.active {
+        border-left: none;
+        border-bottom: 4px solid #4ade80;
+    }
+
+    .content {
+        padding: 15px;
+    }
+
+    header h1 { font-size: 1.5rem; }
+    .print-btn { width: 100%; text-align: center; }
+    .cards { grid-template-columns: 1fr; }
+
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .filter-group select {
+        margin-left: 0;
+        width: 100%;
+    }
+
+    .actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .file-input, .action-btn {
+        width: 100%;
+    }
+}
+
+/* Print CSS */
+@media print {
+    .sidebar, .toolbar, .print-btn, .action-btn, .file-input { display: none !important; }
+    .content { padding: 0; }
+    .card { box-shadow: none; border: 1px solid #ccc; }
+    .app-container { display: block; }
+}
