@@ -1,22 +1,17 @@
 // GANTI DENGAN URL WEB APP GAS ANDA YANG BARU SETELAH DEPLOY!
-const API_URL = 'https://script.google.com/macros/s/AKfycbwSIp-7aT6zrG-32qWpSxfmR8K4OeWFhuVgvEY42io8IKFEO2ASWCICWwmTnxFOz49YVw/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwrrDxMU9ubQITGHuyRnkxP4y7KcCB2chMNy6lqzefelnHdzfFbnTcnsdtVzrv7oT3ulg/exec';
 let appData = null;
 
 
 // ==========================================
 // SINKRONISASI TOMBOL KEMBALI (BACK) ANDROID
 // ==========================================
-let popupTerbuka = 0;
-
-// 1. Deteksi Tombol Fisik Back HP
 window.addEventListener('popstate', (e) => {
-  // A. Jika ada SweetAlert terbuka, tutup saja popupnya
   if (document.body.classList.contains('swal2-shown')) {
     Swal.close(); 
-    return; // PENTING: Wajib ada return agar halaman belakangnya tidak termuat ulang
+    return; 
   }
   
-  // B. Jika tidak ada popup, navigasi ke menu sebelumnya
   if (e.state && e.state.page) {
     if (e.state.page === 'dashboard') renderDashboard(true);
     else if (e.state.page === 'pembayaran') renderPembayaran(null, true);
@@ -27,21 +22,20 @@ window.addEventListener('popstate', (e) => {
   }
 });
 
-// 2. Override (Modifikasi) Swal.fire agar tahan terhadap popup beruntun
 const nativeSwalFire = Swal.fire;
 Swal.fire = function(...args) {
-  // Hanya buat histori palsu jika ini adalah popup PERTAMA yang muncul di layar
-  if (popupTerbuka === 0) {
+  // Hanya tambah histori JIKA sebelumnya tidak ada popup sama sekali
+  if (!document.body.classList.contains('swal2-shown')) {
     history.pushState({ isPopup: true }, "", location.hash || "#");
   }
-  popupTerbuka++;
   
   return nativeSwalFire.apply(this, args).then((result) => {
-    popupTerbuka--;
-    // Jika semua popup sudah beres dan ditutup lewat tombol (bukan lewat tombol back HP)
-    if (popupTerbuka === 0 && history.state && history.state.isPopup) {
-      history.back(); 
-    }
+    // Beri jeda 150ms. Jika berganti dari popup Loading ke Sukses, histori tidak akan dihapus
+    setTimeout(() => {
+      if (!document.body.classList.contains('swal2-shown') && history.state && history.state.isPopup) {
+        history.back(); 
+      }
+    }, 150); 
     return result;
   });
 };
@@ -71,44 +65,50 @@ window.onload = async () => {
 };
 
 function renderDashboard(isBack = false) {
-  // Tambahkan baris ini
   if (!isBack) history.pushState({ page: 'dashboard' }, "", "#beranda");
-  
   updateNav(0);
   if (!appData) return;
   
   const s = appData.statistik;
-  const sisaUjian = s.targetUjian - s.pemasukanUjian;
-  const sisaRapor = s.targetRapor - s.pemasukanRapor;
-  
-  // Fungsi pembantu untuk format Rupiah
   const formatRupiah = (val) => val.toLocaleString('id-ID');
+
+  // Ambil data pengeluaran dari server (jika belum ada, set 0)
+  const keluarUjian = s.pengeluaranUjian || 0;
+  const keluarRapor = s.pengeluaranRapor || 0;
+  
+  // Hitung Saldo Bersih
+  const saldoUjian = s.pemasukanUjian - keluarUjian;
+  const saldoRapor = s.pemasukanRapor - keluarRapor;
 
   const html = `
     <div class="fade-in px-5">
       <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mb-4 flex items-center gap-4">
         <div class="w-12 h-12 rounded-full bg-teal-100 text-teal-600 flex justify-center items-center text-xl"><i class="fas fa-users"></i></div>
         <div>
-          <p class="text-xs text-gray-500 font-semibold uppercase">Total Santri</p>
+          <p class="text-xs text-gray-500 font-semibold uppercase">Total Santri Aktif</p>
           <h2 class="text-2xl font-bold text-gray-800">${s.totalSantri} Orang</h2>
         </div>
       </div>
 
       <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mb-4">
-        <h3 class="font-bold text-gray-700 mb-3 border-b pb-2">Uang Ujian</h3>
-        <div class="grid grid-cols-3 gap-2 text-center">
-          <div><p class="text-[9px] text-gray-400 uppercase">Masuk</p><p class="text-xs font-bold text-teal-600">Rp ${formatRupiah(s.pemasukanUjian)}</p></div>
-          <div><p class="text-[9px] text-gray-400 uppercase">Target</p><p class="text-xs font-bold text-gray-600">Rp ${formatRupiah(s.targetUjian)}</p></div>
-          <div><p class="text-[9px] text-gray-400 uppercase">Sisa</p><p class="text-xs font-bold text-red-500">Rp ${formatRupiah(sisaUjian)}</p></div>
+        <div class="flex justify-between items-center mb-3 border-b pb-2">
+          <h3 class="font-bold text-gray-700">Kas Ujian</h3>
+          <span class="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md font-bold border border-emerald-100">Saldo: Rp ${formatRupiah(saldoUjian)}</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-center">
+          <div class="bg-blue-50 p-2 rounded-xl border border-blue-100"><p class="text-[9px] text-gray-500 uppercase mb-1">Total Masuk</p><p class="text-sm font-bold text-blue-600">Rp ${formatRupiah(s.pemasukanUjian)}</p></div>
+          <div class="bg-red-50 p-2 rounded-xl border border-red-100"><p class="text-[9px] text-gray-500 uppercase mb-1">Total Keluar</p><p class="text-sm font-bold text-red-500">Rp ${formatRupiah(keluarUjian)}</p></div>
         </div>
       </div>
 
       <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mb-4">
-        <h3 class="font-bold text-gray-700 mb-3 border-b pb-2">Uang Rapor</h3>
-        <div class="grid grid-cols-3 gap-2 text-center">
-          <div><p class="text-[9px] text-gray-400 uppercase">Masuk</p><p class="text-xs font-bold text-teal-600">Rp ${formatRupiah(s.pemasukanRapor)}</p></div>
-          <div><p class="text-[9px] text-gray-400 uppercase">Target</p><p class="text-xs font-bold text-gray-600">Rp ${formatRupiah(s.targetRapor)}</p></div>
-          <div><p class="text-[9px] text-gray-400 uppercase">Sisa</p><p class="text-xs font-bold text-red-500">Rp ${formatRupiah(sisaRapor)}</p></div>
+         <div class="flex justify-between items-center mb-3 border-b pb-2">
+          <h3 class="font-bold text-gray-700">Kas Rapor</h3>
+          <span class="text-[10px] bg-emerald-50 text-emerald-600 px-2 py-1 rounded-md font-bold border border-emerald-100">Saldo: Rp ${formatRupiah(saldoRapor)}</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-center">
+          <div class="bg-blue-50 p-2 rounded-xl border border-blue-100"><p class="text-[9px] text-gray-500 uppercase mb-1">Total Masuk</p><p class="text-sm font-bold text-blue-600">Rp ${formatRupiah(s.pemasukanRapor)}</p></div>
+          <div class="bg-red-50 p-2 rounded-xl border border-red-100"><p class="text-[9px] text-gray-500 uppercase mb-1">Total Keluar</p><p class="text-sm font-bold text-red-500">Rp ${formatRupiah(keluarRapor)}</p></div>
         </div>
       </div>
     </div>
@@ -245,7 +245,6 @@ function formatRupiah(input) {
 // FUNGSI SIMPAN DATA (DENGAN AUTO-REFRESH & VALIDASI)
 // ==========================================
 async function simpanData() {
-  // Gunakan optional chaining (?.) agar tidak error jika elemen tidak ada
   const namaInput = document.getElementById('swal-nama')?.value;
   const kelasInput = document.getElementById('swal-kelas')?.value;
   const jenisInput = document.getElementById('swal-jenis')?.value;
@@ -286,7 +285,14 @@ async function simpanData() {
     data: { nama: namaInput, kelas: kelasInput, jenis: jenisInput, nominal: nominalInput }
   };
 
-  Swal.fire({ title: 'Memproses Transaksi...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() }});
+  // ANIMASI LOADING KEREN 1: Mengirim Data
+  Swal.fire({ 
+    title: 'Menyimpan Transaksi...', 
+    html: 'Mohon tunggu, data sedang dikirim ke server.',
+    allowOutsideClick: false, 
+    showConfirmButton: false,
+    didOpen: () => { Swal.showLoading() }
+  });
   
   try {
     const response = await fetch(API_URL, {
@@ -299,14 +305,25 @@ async function simpanData() {
     const result = JSON.parse(textResponse);
     
     if(result.success) {
+      // ANIMASI LOADING KEREN 2: Sinkronisasi Layar
+      Swal.fire({ 
+        title: 'Memperbarui Data...', 
+        html: 'Transaksi berhasil! Menyinkronkan tampilan...',
+        allowOutsideClick: false, 
+        showConfirmButton: false,
+        didOpen: () => { Swal.showLoading() }
+      });
+      
+      // Ambil data baru secara diam-diam
+      await muatUlangDataTanpaReload();
+      
+      // Munculkan Centang Hijau (tanpa reload page!)
       Swal.fire({ 
         icon: 'success', 
-        title: 'Sukses', 
+        title: 'Sukses!', 
         text: result.message, 
-        timer: 1500, 
+        timer: 2000, 
         showConfirmButton: false 
-      }).then(() => {
-        location.reload(); 
       });
     } else {
       Swal.fire('Gagal', result.message, 'error');
@@ -776,57 +793,153 @@ async function simpanSettingBiaya() {
 // FUNGSI TRANSAKSI CEPAT (TOMBOL PLUS)
 // ==========================================
 function bukaTransaksiCepat() {
-  if (!appData || !appData.santri) return;
-
-  // 1. Ekstrak daftar kelas yang ada di database
-  const uniqueClasses = [...new Set(appData.santri.map(s => s.kelas))].sort();
-  let optionsKelas = '<option value="" disabled selected>-- Pilih Kelas --</option>';
-  uniqueClasses.forEach(c => {
-    optionsKelas += `<option value="${c}">${c}</option>`;
-  });
-
-  // 2. Tampilkan Pop-up
   Swal.fire({
-    title: 'Transaksi Cepat',
+    title: 'Pilih Jenis Transaksi',
     html: `
-      <div class="text-left mt-2">
-        <label class="block text-xs font-bold mb-1">Pilih Kelas</label>
-        <select id="swal-kelas" class="w-full border rounded-xl p-2 mb-3 bg-white text-sm cursor-pointer" onchange="updateDropdownSantri(this.value)">
-          ${optionsKelas}
-        </select>
-        
-        <label class="block text-xs font-bold mb-1">Nama Santri</label>
-        <select id="swal-nama" class="w-full border rounded-xl p-2 mb-3 bg-gray-100 text-sm cursor-not-allowed" disabled>
-          <option value="">Pilih kelas terlebih dahulu...</option>
-        </select>
-        
-        <label class="block text-xs font-bold mb-1">Jenis Pembayaran</label>
-        <select id="swal-jenis" class="w-full border rounded-xl p-2 mb-3 bg-white text-sm cursor-pointer">
-          <option value="Uang Ujian">Uang Ujian</option>
-          <option value="Uang Rapor">Uang Rapor</option>
-        </select>
-        
-        <label class="block text-xs font-bold mb-1">Nominal</label>
-        <input id="swal-nominal" type="text" class="w-full border rounded-xl p-2 mb-3 text-sm font-bold text-teal-600" placeholder="Contoh: 150.000" oninput="formatRupiah(this)">
+      <div class="grid grid-cols-2 gap-3 mt-4">
+        <div onclick="bukaInputPemasukan()" class="bg-teal-50 border border-teal-200 p-4 rounded-2xl cursor-pointer hover:bg-teal-100 transition-colors flex flex-col items-center gap-2">
+          <div class="w-12 h-12 bg-teal-600 text-white rounded-full flex items-center justify-center text-xl shadow-md"><i class="fas fa-hand-holding-usd"></i></div>
+          <p class="text-xs font-bold text-teal-800 text-center mt-1">Terima<br>Pembayaran</p>
+        </div>
+        <div onclick="bukaInputPengeluaran()" class="bg-red-50 border border-red-200 p-4 rounded-2xl cursor-pointer hover:bg-red-100 transition-colors flex flex-col items-center gap-2">
+           <div class="w-12 h-12 bg-red-500 text-white rounded-full flex items-center justify-center text-xl shadow-md"><i class="fas fa-file-invoice-dollar"></i></div>
+          <p class="text-xs font-bold text-red-800 text-center mt-1">Catat<br>Pengeluaran</p>
+        </div>
       </div>
     `,
-    showCancelButton: true,
-    confirmButtonText: 'Simpan',
-    confirmButtonColor: '#0d9488', // Warna teal-600
+    showConfirmButton: false,
+    showCloseButton: true,
     position: 'bottom',
-    customClass: { popup: 'rounded-t-3xl' },
-    preConfirm: () => {
-      // Validasi agar tidak bisa simpan kalau form masih kosong
-      if (!document.getElementById('swal-kelas').value || !document.getElementById('swal-nama').value || !document.getElementById('swal-nominal').value) {
-        Swal.showValidationMessage('Harap lengkapi Kelas, Nama Santri, dan Nominal!');
-        return false;
-      }
-    }
-  }).then((result) => {
-    // Karena ID inputnya sengaja disamakan (swal-nama, swal-kelas, dll),
-    // kita bisa langsung menggunakan fungsi simpanData() bawaan Anda!
-    if (result.isConfirmed) simpanData();
+    customClass: { popup: 'rounded-t-3xl' }
   });
+}
+
+// Fungsi Pemasukan memanggil form lama Anda
+function bukaInputPemasukan() {
+  Swal.close(); 
+  setTimeout(() => {
+    // Isi dari fungsi bukaTransaksiCepat Anda yang lama dipindahkan ke sini
+    if (!appData || !appData.santri) return;
+    const uniqueClasses = [...new Set(appData.santri.map(s => s.kelas))].sort();
+    let optionsKelas = '<option value="" disabled selected>-- Pilih Kelas --</option>';
+    uniqueClasses.forEach(c => { optionsKelas += `<option value="${c}">${c}</option>`; });
+
+    Swal.fire({
+      title: 'Terima Pembayaran',
+      html: `
+        <div class="text-left mt-2">
+          <label class="block text-xs font-bold mb-1">Pilih Kelas</label>
+          <select id="swal-kelas" class="w-full border rounded-xl p-2 mb-3 bg-white text-sm cursor-pointer" onchange="updateDropdownSantri(this.value)">${optionsKelas}</select>
+          <label class="block text-xs font-bold mb-1">Nama Santri</label>
+          <select id="swal-nama" class="w-full border rounded-xl p-2 mb-3 bg-gray-100 text-sm cursor-not-allowed" disabled><option value="">Pilih kelas terlebih dahulu...</option></select>
+          <label class="block text-xs font-bold mb-1">Jenis</label>
+          <select id="swal-jenis" class="w-full border rounded-xl p-2 mb-3 bg-white text-sm cursor-pointer">
+            <option value="Uang Ujian">Uang Ujian</option>
+            <option value="Uang Rapor">Uang Rapor</option>
+          </select>
+          <label class="block text-xs font-bold mb-1">Nominal</label>
+          <input id="swal-nominal" type="text" class="w-full border rounded-xl p-2 mb-3 text-sm font-bold text-teal-600" placeholder="Contoh: 50.000" oninput="formatRupiah(this)">
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Simpan',
+      confirmButtonColor: '#0d9488',
+      position: 'bottom',
+      customClass: { popup: 'rounded-t-3xl' },
+      preConfirm: () => {
+        if (!document.getElementById('swal-kelas').value || !document.getElementById('swal-nama').value || !document.getElementById('swal-nominal').value) {
+          Swal.showValidationMessage('Harap lengkapi semua data!'); return false;
+        }
+      }
+    }).then((result) => { if (result.isConfirmed) simpanData(); });
+  }, 300); // Jeda agar transisi animasi mulus
+}
+
+// Fungsi Form Baru untuk Pengeluaran
+function bukaInputPengeluaran() {
+  Swal.close();
+  setTimeout(() => {
+    Swal.fire({
+      title: 'Catat Pengeluaran',
+      html: `
+        <div class="text-left mt-2">
+          <label class="block text-xs font-bold mb-1 text-red-600">Ambil dari Kas</label>
+          <select id="swal-kategori-keluar" class="w-full border rounded-xl p-2 mb-3 bg-white text-sm cursor-pointer">
+            <option value="Uang Ujian">Kas Ujian</option>
+            <option value="Uang Rapor">Kas Rapor</option>
+          </select>
+          
+          <label class="block text-xs font-bold mb-1 text-gray-700">Nominal Keluar</label>
+          <input id="swal-nominal-keluar" type="text" class="w-full border rounded-xl p-2 mb-3 text-sm font-bold text-red-500" placeholder="Contoh: 50.000" oninput="formatRupiah(this)">
+          
+          <label class="block text-xs font-bold mb-1 text-gray-700">Keterangan / Rincian</label>
+          <textarea id="swal-ket-keluar" class="w-full border rounded-xl p-2 mb-3 text-sm bg-gray-50 h-20" placeholder="Contoh: Biaya fotocopy soal ujian..."></textarea>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: 'Simpan Pengeluaran',
+      confirmButtonColor: '#ef4444',
+      position: 'bottom',
+      customClass: { popup: 'rounded-t-3xl' },
+      preConfirm: () => {
+        if (!document.getElementById('swal-nominal-keluar').value || !document.getElementById('swal-ket-keluar').value) {
+          Swal.showValidationMessage('Nominal dan Keterangan harus diisi!');
+          return false;
+        }
+      }
+    }).then((result) => {
+      if (result.isConfirmed) prosesSimpanPengeluaran();
+    });
+  }, 300);
+}
+
+// Proses Kirim ke Server
+async function prosesSimpanPengeluaran() {
+  const kategori = document.getElementById('swal-kategori-keluar').value;
+  const nominal = Number(document.getElementById('swal-nominal-keluar').value.replace(/\./g, ''));
+  const keterangan = document.getElementById('swal-ket-keluar').value;
+
+  const payload = {
+    action: 'simpan_pengeluaran',
+    data: { kategori: kategori, nominal: nominal, keterangan: keterangan }
+  };
+
+  // LOADING 1
+  Swal.fire({ 
+    title: 'Mencatat Pengeluaran...', 
+    html: 'Mohon tunggu, menyinkronkan dengan server.',
+    allowOutsideClick: false, 
+    showConfirmButton: false,
+    didOpen: () => Swal.showLoading() 
+  });
+  
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    
+    const result = await response.json();
+    if(result.success) {
+      // LOADING 2
+      Swal.fire({ 
+        title: 'Memperbarui Saldo...', 
+        allowOutsideClick: false, 
+        showConfirmButton: false,
+        didOpen: () => Swal.showLoading() 
+      });
+      
+      // Panggil fungsi siluman
+      await muatUlangDataTanpaReload();
+      
+      Swal.fire({ icon: 'success', title: 'Sukses', text: result.message, timer: 1500, showConfirmButton: false });
+    } else {
+      Swal.fire('Gagal', result.message, 'error');
+    }
+  } catch (error) {
+    Swal.fire('Error', 'Gagal menghubungi server.', 'error');
+  }
 }
 
 // ==========================================
@@ -850,4 +963,23 @@ function updateDropdownSantri(kelasTerpilih) {
   selectNama.disabled = false;
   selectNama.classList.remove('bg-gray-100', 'cursor-not-allowed');
   selectNama.classList.add('bg-white', 'cursor-pointer');
+}
+
+// ==========================================
+// FUNGSI REFRESH DATA TANPA LAYAR PUTIH
+// ==========================================
+async function muatUlangDataTanpaReload() {
+  try {
+    const response = await fetch(API_URL);
+    appData = await response.json();
+    
+    // Render ulang antarmuka yang sedang terbuka saja
+    const hash = location.hash;
+    if (hash === '#santri') renderPembayaran(filterTingkat, true);
+    else if (hash === '#laporan') renderLaporan('Uang Ujian', true);
+    else if (hash === '#pengaturan') renderSetting(true);
+    else renderDashboard(true);
+  } catch (error) {
+    console.error("Gagal sinkronisasi background", error);
+  }
 }
