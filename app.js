@@ -1,5 +1,5 @@
 // GANTI DENGAN URL WEB APP GAS ANDA
-const API_URL = 'https://script.google.com/macros/s/AKfycbwmfh6Zsjz-DML5YbERzw80fhcwisqjotfkYE7yRx_7gQechv5O2qQZatyVpghxxIvesg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbxf5smHZ465NH5yxqrzuU6UkKh6Da4JppaAFxZMrWLq-T79c3NPEjzJxiS-YbzbsoYk_Q/exec';
 let appData = null;
 
 // Pendaftaran Service Worker untuk PWA
@@ -23,25 +23,39 @@ window.onload = async () => {
 function renderDashboard() {
   updateNav(0);
   if (!appData) return;
+  
+  const s = appData.statistik;
+  const sisaUjian = s.targetUjian - s.pemasukanUjian;
+  const sisaRapor = s.targetRapor - s.pemasukanRapor;
+  
+  // Fungsi pembantu untuk format Rupiah
+  const formatRupiah = (val) => val.toLocaleString('id-ID');
+
   const html = `
-    <div class="fade-in">
+    <div class="fade-in px-5">
       <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mb-4 flex items-center gap-4">
-        <div class="w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 flex justify-center items-center text-xl">
-          <i class="fas fa-users"></i>
-        </div>
+        <div class="w-12 h-12 rounded-full bg-teal-100 text-teal-600 flex justify-center items-center text-xl"><i class="fas fa-users"></i></div>
         <div>
           <p class="text-xs text-gray-500 font-semibold uppercase">Total Santri</p>
-          <h2 class="text-2xl font-bold text-gray-800">${appData.statistik.totalSantri} <span class="text-sm font-normal">Orang</span></h2>
+          <h2 class="text-2xl font-bold text-gray-800">${s.totalSantri} Orang</h2>
         </div>
       </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
-          <p class="text-xs text-gray-500 mb-1">Pemasukan</p>
-          <h3 class="text-lg font-bold text-emerald-600">Rp ${(appData.statistik.totalMasuk/1000000).toFixed(1)} Jt</h3>
+
+      <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mb-4">
+        <h3 class="font-bold text-gray-700 mb-3 border-b pb-2">Uang Ujian</h3>
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div><p class="text-[9px] text-gray-400 uppercase">Masuk</p><p class="text-xs font-bold text-teal-600">Rp ${formatRupiah(s.pemasukanUjian)}</p></div>
+          <div><p class="text-[9px] text-gray-400 uppercase">Target</p><p class="text-xs font-bold text-gray-600">Rp ${formatRupiah(s.targetUjian)}</p></div>
+          <div><p class="text-[9px] text-gray-400 uppercase">Sisa</p><p class="text-xs font-bold text-red-500">Rp ${formatRupiah(sisaUjian)}</p></div>
         </div>
-        <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100">
-          <p class="text-xs text-gray-500 mb-1">Saldo</p>
-          <h3 class="text-lg font-bold text-blue-600">Rp ${(appData.statistik.saldo/1000000).toFixed(1)} Jt</h3>
+      </div>
+
+      <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mb-4">
+        <h3 class="font-bold text-gray-700 mb-3 border-b pb-2">Uang Rapor</h3>
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div><p class="text-[9px] text-gray-400 uppercase">Masuk</p><p class="text-xs font-bold text-teal-600">Rp ${formatRupiah(s.pemasukanRapor)}</p></div>
+          <div><p class="text-[9px] text-gray-400 uppercase">Target</p><p class="text-xs font-bold text-gray-600">Rp ${formatRupiah(s.targetRapor)}</p></div>
+          <div><p class="text-[9px] text-gray-400 uppercase">Sisa</p><p class="text-xs font-bold text-red-500">Rp ${formatRupiah(sisaRapor)}</p></div>
         </div>
       </div>
     </div>
@@ -50,7 +64,7 @@ function renderDashboard() {
 }
 
 // ==========================================
-// HALAMAN SANTRI (DENGAN TOMBOL RIWAYAT)
+// HALAMAN SANTRI (DENGAN DROPDOWN FILTER CERDAS)
 // ==========================================
 let filterTingkat = 'Semua';
 
@@ -59,12 +73,16 @@ function renderPembayaran(filterManual = null) {
   if (!appData) return;
   if (filterManual) filterTingkat = filterManual; 
   
+  // 1. Ekstrak semua nama kelas spesifik secara otomatis dari data
+  const uniqueClasses = [...new Set(appData.santri.map(s => s.kelas))].sort();
+
+  // 2. Terapkan Filter
   let dataSantri = appData.santri;
   if (filterTingkat !== 'Semua') {
-    dataSantri = dataSantri.filter(s => s.kelas.toUpperCase().includes(filterTingkat));
+    // Ubah ke uppercase agar pencarian tidak sensitif huruf besar/kecil
+    dataSantri = dataSantri.filter(s => s.kelas.toUpperCase().includes(filterTingkat.toUpperCase()));
   }
 
-  // MENGGANTI LABEL STATUS MENJADI TOMBOL RIWAYAT
   const listHTML = dataSantri.map(s => `
     <div class="santri-card bg-white p-4 rounded-3xl shadow-sm border border-gray-100 mb-3 flex justify-between items-center hover:bg-gray-50 transition cursor-pointer" onclick="bukaFormPembayaran('${s.nama}', '${s.kelas}')">
       <div class="flex items-center gap-3">
@@ -75,7 +93,6 @@ function renderPembayaran(filterManual = null) {
         </div>
       </div>
       
-      <!-- Tombol Riwayat (Mencegah form bayar terbuka jika ini yang diklik) -->
       <button onclick="lihatRiwayat('${s.nama}', event)" class="text-[10px] bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full font-bold border border-blue-100 hover:bg-blue-500 hover:text-white transition-colors shadow-sm flex items-center gap-1 z-10">
         <i class="fas fa-history"></i> Riwayat
       </button>
@@ -85,20 +102,32 @@ function renderPembayaran(filterManual = null) {
 
   document.getElementById('app-content').innerHTML = `
     <div class="max-w-2xl mx-auto fade-in pb-20 pt-2 px-2">
-      <div class="flex overflow-x-auto hide-scroll gap-2 mb-4 p-1">
-        <button onclick="renderPembayaran('Semua')" class="px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition ${filterTingkat === 'Semua' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-gray-500 border'}">Semua Kelas</button>
-        <button onclick="renderPembayaran('TK')" class="px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition ${filterTingkat === 'TK' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-gray-500 border'}">Tingkat TK</button>
-        <button onclick="renderPembayaran('IBT')" class="px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition ${filterTingkat === 'IBT' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-gray-500 border'}">Ibtidaiyah</button>
-        <button onclick="renderPembayaran('SANA')" class="px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition ${filterTingkat === 'SANA' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-white text-gray-500 border'}">Sanawiyah</button>
+      <div class="relative mb-4">
+        <select onchange="renderPembayaran(this.value)" class="w-full bg-white border border-gray-100 shadow-sm rounded-2xl px-4 py-3 text-sm font-bold text-gray-700 outline-none focus:border-emerald-500 appearance-none cursor-pointer">
+          <option value="Semua" ${filterTingkat === 'Semua' ? 'selected' : ''}>🌍 Semua Data Santri</option>
+          <optgroup label="Tingkatan">
+            <option value="TK" ${filterTingkat === 'TK' ? 'selected' : ''}>🏫 TK</option>
+            <option value="IBT" ${filterTingkat === 'IBT' ? 'selected' : ''}>🏫 Ibtidaiyah (IBT)</option>
+            <option value="SANA" ${filterTingkat === 'SANA' ? 'selected' : ''}>🏫 Sanawiyah (SANA)</option>
+          </optgroup>
+          <optgroup label="Kelas Spesifik">
+            ${uniqueClasses.map(c => `<option value="${c}" ${filterTingkat === c ? 'selected' : ''}>📍 ${c}</option>`).join('')}
+          </optgroup>
+        </select>
+        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-emerald-500">
+          <i class="fas fa-chevron-down"></i>
+        </div>
       </div>
 
-      <div class="flex justify-between items-center mb-4">
-        <div class="relative w-full mr-2">
-          <i class="fas fa-search absolute left-4 top-3 text-gray-400"></i>
-          <input type="text" id="inputPencarian" onkeyup="filterSantri()" placeholder="Cari Nama atau NIS..." class="w-full bg-white border border-gray-200 shadow-sm rounded-2xl pl-10 pr-4 py-2 text-sm outline-none focus:border-emerald-500">
+      <div class="flex items-center gap-2 mb-6">
+        <div class="relative flex-1">
+          <i class="fas fa-search absolute left-4 top-3.5 text-gray-400 text-sm"></i>
+          <input type="text" id="inputPencarian" onkeyup="filterSantri()" placeholder="Cari nama atau NIS..." 
+                 class="w-full bg-white border border-gray-100 shadow-sm rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all">
         </div>
-        <button onclick="bukaFormImport()" class="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-2.5 rounded-2xl shadow-sm hover:scale-105 transition">
-          <i class="fas fa-file-excel"></i>
+        <button onclick="bukaFormImport()" 
+                class="bg-white border border-gray-100 shadow-sm text-blue-600 px-4 py-3.5 rounded-2xl hover:bg-blue-50 transition-all group">
+          <i class="fas fa-file-import text-lg group-hover:scale-110 transition-transform"></i>
         </button>
       </div>
       
@@ -108,6 +137,9 @@ function renderPembayaran(filterManual = null) {
   `;
 }
 
+// ==========================================
+// FUNGSI POP-UP INPUT PEMBAYARAN
+// ==========================================
 function bukaFormPembayaran(nama = '', kelas = '') {
   Swal.fire({
     title: 'Input Pembayaran',
@@ -138,7 +170,7 @@ function bukaFormPembayaran(nama = '', kelas = '') {
 }
 
 // ==========================================
-// FUNGSI SIMPAN DATA (VALIDASI CICILAN DI HP)
+// FUNGSI SIMPAN DATA (DENGAN AUTO-REFRESH & VALIDASI)
 // ==========================================
 async function simpanData() {
   const namaInput = document.getElementById('swal-nama').value;
@@ -146,13 +178,11 @@ async function simpanData() {
   const jenisInput = document.getElementById('swal-jenis').value;
   const nominalInput = Number(document.getElementById('swal-nominal').value);
 
-  // VALIDASI CICILAN
   if (appData && appData.pembayaran) {
     const setting = getPengaturanBiaya();
     const kelasTeks = kelasInput.toUpperCase();
     let target = 0;
     
-    // Cari target berdasarkan kelas dan jenis yang mau dibayar
     if (jenisInput === "Uang Ujian") {
       if (kelasTeks.includes("TK")) target = setting.tk_ujian;
       else if (kelasTeks.includes("IBT")) target = setting.ibt_ujian;
@@ -163,7 +193,6 @@ async function simpanData() {
       else if (kelasTeks.includes("SANA")) target = setting.sana_rapor;
     }
 
-    // Hitung total cicilan sebelumnya
     const riwayatSantri = appData.pembayaran.filter(p => p.nama === namaInput && p.jenis === jenisInput);
     const totalTerbayar = riwayatSantri.reduce((sum, r) => sum + r.nominal, 0);
     
@@ -184,7 +213,7 @@ async function simpanData() {
     data: { nama: namaInput, kelas: kelasInput, jenis: jenisInput, nominal: nominalInput }
   };
 
-  Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() }});
+  Swal.fire({ title: 'Memproses Transaksi...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() }});
   
   try {
     const response = await fetch(API_URL, {
@@ -197,7 +226,15 @@ async function simpanData() {
     const result = JSON.parse(textResponse);
     
     if(result.success) {
-      Swal.fire({ icon: 'success', title: 'Sukses', text: result.message, timer: 2000, showConfirmButton: false }).then(() => { location.reload(); });
+      Swal.fire({ 
+        icon: 'success', 
+        title: 'Sukses', 
+        text: result.message, 
+        timer: 1500, 
+        showConfirmButton: false 
+      }).then(() => {
+        location.reload(); 
+      });
     } else {
       Swal.fire('Gagal', result.message, 'error');
     }
@@ -206,35 +243,83 @@ async function simpanData() {
   }
 }
 
-async function simpanData() {
-  const payload = {
-    action: 'simpan_pembayaran',
-    data: {
-      nama: document.getElementById('swal-nama').value,
-      jenis: document.getElementById('swal-jenis').value,
-      nominal: document.getElementById('swal-nominal').value
-    }
-  };
-
-  Swal.fire({ title: 'Menyimpan...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() }});
+// ==========================================
+// FUNGSI LIHAT RIWAYAT (MENAMPILKAN SISA CICILAN)
+// ==========================================
+function lihatRiwayat(namaSantri, event) {
+  if (event) event.stopPropagation(); 
+  if (!appData || !appData.pembayaran) return;
   
-  try {
-    const response = await fetch(API_URL, {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
-    const result = await response.json();
-    
-    if(result.success) {
-      Swal.fire({ icon: 'success', title: 'Sukses', text: result.message, timer: 2000, showConfirmButton: false });
-    } else {
-      Swal.fire('Gagal', result.message, 'error');
-    }
-  } catch (error) {
-    Swal.fire('Info Jaringan', 'Data pembayaran terkirim. Cek Google Sheets Anda.', 'info');
+  const riwayatSantri = appData.pembayaran.filter(p => p.nama === namaSantri);
+  const santri = appData.santri.find(s => s.nama === namaSantri);
+  const kelas = santri ? santri.kelas.toUpperCase() : "";
+  
+  const setting = getPengaturanBiaya();
+  let targetUjian = 0, targetRapor = 0;
+  
+  if (kelas.includes('TK')) { targetUjian = setting.tk_ujian; targetRapor = setting.tk_rapor; }
+  else if (kelas.includes('IBT')) { targetUjian = setting.ibt_ujian; targetRapor = setting.ibt_rapor; }
+  else if (kelas.includes('SANA')) { targetUjian = setting.sana_ujian; targetRapor = setting.sana_rapor; }
+  
+  let totalUjian = riwayatSantri.filter(r => r.jenis === 'Uang Ujian').reduce((sum, r) => sum + r.nominal, 0);
+  let totalRapor = riwayatSantri.filter(r => r.jenis === 'Uang Rapor').reduce((sum, r) => sum + r.nominal, 0);
+  
+  let sisaUjian = targetUjian - totalUjian;
+  let sisaRapor = targetRapor - totalRapor;
+
+  let infoSisaPanel = `
+    <div class="bg-emerald-50 p-3 rounded-xl mb-4 border border-emerald-100 flex justify-between text-left shadow-sm">
+      <div class="flex-1 border-r border-emerald-200 pr-2">
+        <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Sisa Ujian</p>
+        <p class="text-sm font-bold ${sisaUjian <= 0 ? 'text-emerald-600' : 'text-red-500'}">
+          ${sisaUjian <= 0 ? '<i class="fas fa-check-circle"></i> LUNAS' : 'Rp ' + sisaUjian.toLocaleString('id-ID')}
+        </p>
+      </div>
+      <div class="flex-1 pl-3">
+        <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Sisa Rapor</p>
+        <p class="text-sm font-bold ${sisaRapor <= 0 ? 'text-emerald-600' : 'text-red-500'}">
+          ${sisaRapor <= 0 ? '<i class="fas fa-check-circle"></i> LUNAS' : 'Rp ' + sisaRapor.toLocaleString('id-ID')}
+        </p>
+      </div>
+    </div>
+  `;
+
+  let listRiwayatHTML = '';
+  if (riwayatSantri.length === 0) {
+    listRiwayatHTML = `<div class="text-center py-4"><p class="text-xs text-gray-400">Belum ada cicilan/pembayaran.</p></div>`;
+  } else {
+    listRiwayatHTML = riwayatSantri.map(r => `
+      <div class="flex justify-between items-center border-b border-gray-100 py-3 last:border-0">
+        <div class="text-left">
+          <p class="text-xs font-bold text-gray-800 uppercase">${r.jenis}</p>
+          <p class="text-[10px] text-gray-400 mt-0.5"><i class="far fa-calendar-alt"></i> ${new Date(r.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})}</p>
+        </div>
+        <div class="text-right font-bold text-emerald-600 text-sm">
+          + Rp ${r.nominal.toLocaleString('id-ID')}
+        </div>
+      </div>
+    `).join('');
   }
+
+  Swal.fire({
+    title: `<div class="text-base text-gray-800 pt-2 font-bold"><i class="fas fa-history text-blue-500 mr-1"></i> Detail Pembayaran</div>`,
+    html: `
+      <p class="text-xs text-gray-500 mb-3 font-bold border-b pb-2">${namaSantri}</p>
+      ${infoSisaPanel}
+      <p class="text-[10px] font-bold text-gray-400 uppercase text-left mb-1 px-1">Riwayat Cicilan</p>
+      <div class="max-h-56 overflow-y-auto hide-scroll bg-white p-3 rounded-2xl shadow-inner border border-gray-100">
+        ${listRiwayatHTML}
+      </div>
+    `,
+    showCloseButton: true,
+    showConfirmButton: false,
+    customClass: { popup: 'rounded-[32px] bg-gray-50' }
+  });
 }
 
+// ==========================================
+// FITUR PENCARIAN & IMPORT EXCEL
+// ==========================================
 function filterSantri() {
   const keyword = document.getElementById('inputPencarian').value.toLowerCase();
   const cards = document.querySelectorAll('.santri-card');
@@ -287,7 +372,6 @@ function bukaFormImport() {
 
 function prosesImportExcel(file) {
   const reader = new FileReader();
-  
   Swal.fire({ title: 'Membaca File...', allowOutsideClick: false, didOpen: () => { Swal.showLoading() }});
 
   reader.onload = function(e) {
@@ -297,7 +381,6 @@ function prosesImportExcel(file) {
     const worksheet = workbook.Sheets[namaSheetPertama];
     
     const rawJSON = XLSX.utils.sheet_to_json(worksheet);
-    
     if (rawJSON.length === 0) {
       Swal.fire('File Kosong', 'Tidak ada data di dalam file Excel.', 'error');
       return;
@@ -343,7 +426,6 @@ async function kirimDataImportKeServer(dataSantri) {
     });
     
     const result = await response.json();
-    
     if (result.success) {
       Swal.fire('Sukses', result.message, 'success').then(() => location.reload());
     } else {
@@ -355,7 +437,7 @@ async function kirimDataImportKeServer(dataSantri) {
 }
 
 // ==========================================
-// FITUR LAPORAN
+// FITUR LAPORAN & GRAFIK
 // ==========================================
 function renderLaporan(tabAktif = 'Semua') {
   updateNav(3); 
@@ -369,8 +451,7 @@ function renderLaporan(tabAktif = 'Semua') {
 
   appData.santri.forEach(s => {
     const teksKelas = s.kelas.toUpperCase();
-    let biayaUjian = 0;
-    let biayaRapor = 0;
+    let biayaUjian = 0, biayaRapor = 0;
 
     if (teksKelas.includes('TK')) { biayaUjian = settingBiaya.tk_ujian; biayaRapor = settingBiaya.tk_rapor; }
     else if (teksKelas.includes('IBT')) { biayaUjian = settingBiaya.ibt_ujian; biayaRapor = settingBiaya.ibt_rapor; }
@@ -564,7 +645,7 @@ async function simpanSettingBiaya() {
     try {
       result = JSON.parse(textResponse);
     } catch (e) {
-      throw new Error("Respon server salah. Cek URL API atau pengaturan Deploy Anda. Respon: " + textResponse.substring(0, 50));
+      throw new Error("Respon server salah. Cek URL API atau pengaturan Deploy Anda.");
     }
     
     if (result.success) {
@@ -577,84 +658,4 @@ async function simpanSettingBiaya() {
   } catch (error) {
     Swal.fire('Gagal Terkirim', 'Error: ' + error.message, 'error');
   }
-}
-
-// ==========================================
-// FUNGSI LIHAT RIWAYAT (MENAMPILKAN SISA CICILAN)
-// ==========================================
-function lihatRiwayat(namaSantri, event) {
-  if (event) event.stopPropagation(); 
-  if (!appData || !appData.pembayaran) return;
-  
-  // 1. Ambil data santri & riwayatnya
-  const riwayatSantri = appData.pembayaran.filter(p => p.nama === namaSantri);
-  const santri = appData.santri.find(s => s.nama === namaSantri);
-  const kelas = santri ? santri.kelas.toUpperCase() : "";
-  
-  // 2. Ambil target tagihan berdasarkan kelasnya
-  const setting = getPengaturanBiaya();
-  let targetUjian = 0, targetRapor = 0;
-  
-  if (kelas.includes('TK')) { targetUjian = setting.tk_ujian; targetRapor = setting.tk_rapor; }
-  else if (kelas.includes('IBT')) { targetUjian = setting.ibt_ujian; targetRapor = setting.ibt_rapor; }
-  else if (kelas.includes('SANA')) { targetUjian = setting.sana_ujian; targetRapor = setting.sana_rapor; }
-  
-  // 3. Hitung total yang sudah dibayar (dicicil)
-  let totalUjian = riwayatSantri.filter(r => r.jenis === 'Uang Ujian').reduce((sum, r) => sum + r.nominal, 0);
-  let totalRapor = riwayatSantri.filter(r => r.jenis === 'Uang Rapor').reduce((sum, r) => sum + r.nominal, 0);
-  
-  // 4. Hitung Sisa
-  let sisaUjian = targetUjian - totalUjian;
-  let sisaRapor = targetRapor - totalRapor;
-
-  // 5. Buat Desain Panel Sisa Tagihan
-  let infoSisaPanel = `
-    <div class="bg-emerald-50 p-3 rounded-xl mb-4 border border-emerald-100 flex justify-between text-left shadow-sm">
-      <div class="flex-1 border-r border-emerald-200 pr-2">
-        <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Sisa Ujian</p>
-        <p class="text-sm font-bold ${sisaUjian <= 0 ? 'text-emerald-600' : 'text-red-500'}">
-          ${sisaUjian <= 0 ? '<i class="fas fa-check-circle"></i> LUNAS' : 'Rp ' + sisaUjian.toLocaleString('id-ID')}
-        </p>
-      </div>
-      <div class="flex-1 pl-3">
-        <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Sisa Rapor</p>
-        <p class="text-sm font-bold ${sisaRapor <= 0 ? 'text-emerald-600' : 'text-red-500'}">
-          ${sisaRapor <= 0 ? '<i class="fas fa-check-circle"></i> LUNAS' : 'Rp ' + sisaRapor.toLocaleString('id-ID')}
-        </p>
-      </div>
-    </div>
-  `;
-
-  // 6. Buat List Riwayat
-  let listRiwayatHTML = '';
-  if (riwayatSantri.length === 0) {
-    listRiwayatHTML = `<div class="text-center py-4"><p class="text-xs text-gray-400">Belum ada cicilan/pembayaran.</p></div>`;
-  } else {
-    listRiwayatHTML = riwayatSantri.map(r => `
-      <div class="flex justify-between items-center border-b border-gray-100 py-3 last:border-0">
-        <div class="text-left">
-          <p class="text-xs font-bold text-gray-800 uppercase">${r.jenis}</p>
-          <p class="text-[10px] text-gray-400 mt-0.5"><i class="far fa-calendar-alt"></i> ${new Date(r.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})}</p>
-        </div>
-        <div class="text-right font-bold text-emerald-600 text-sm">
-          + Rp ${r.nominal.toLocaleString('id-ID')}
-        </div>
-      </div>
-    `).join('');
-  }
-
-  Swal.fire({
-    title: `<div class="text-base text-gray-800 pt-2 font-bold"><i class="fas fa-history text-blue-500 mr-1"></i> Detail Pembayaran</div>`,
-    html: `
-      <p class="text-xs text-gray-500 mb-3 font-bold border-b pb-2">${namaSantri}</p>
-      ${infoSisaPanel}
-      <p class="text-[10px] font-bold text-gray-400 uppercase text-left mb-1 px-1">Riwayat Cicilan</p>
-      <div class="max-h-56 overflow-y-auto hide-scroll bg-white p-3 rounded-2xl shadow-inner border border-gray-100">
-        ${listRiwayatHTML}
-      </div>
-    `,
-    showCloseButton: true,
-    showConfirmButton: false,
-    customClass: { popup: 'rounded-[32px] bg-gray-50' }
-  });
 }

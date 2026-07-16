@@ -17,18 +17,21 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  <script>
-    tailwind.config = {
-      theme: { 
-        extend: { 
-          fontFamily: { sans: ['Outfit', 'sans-serif'] },
-          colors: { emerald: { 400: '#34d399', 500: '#10b981', 600: '#059669', 700: '#047857' } }, 
-          borderRadius: { '3xl': '24px', '4xl': '32px' },
-          boxShadow: { 'soft': '0 10px 40px -10px rgba(0,0,0,0.08)' }
-        } 
-      }
+<script>
+  tailwind.config = {
+    theme: { 
+      extend: { 
+        fontFamily: { sans: ['Outfit', 'sans-serif'] },
+        // Ganti emerald menjadi teal
+        colors: { 
+          teal: { 400: '#2dd4bf', 500: '#14b8a6', 600: '#0d9488', 700: '#0f766e' } 
+        }, 
+        borderRadius: { '3xl': '24px', '4xl': '32px' },
+        boxShadow: { 'soft': '0 10px 40px -10px rgba(0,0,0,0.08)' }
+      } 
     }
-  </script>
+  }
+</script>
   
   <style>
     /* Reset Tap & Scrollbar */
@@ -62,7 +65,7 @@
 
   <div class="mobile-container pb-24 relative shadow-soft overflow-hidden">
 
-    <header class="bg-gradient-to-r from-emerald-600 to-emerald-500 text-white p-5 pt-6 shadow-md rounded-b-[2rem] sticky top-0 z-50 relative overflow-hidden">
+    <header class="bg-gradient-to-r from-teal-700 to-teal-600 text-white p-5 pt-6 shadow-md rounded-b-[2rem] sticky top-0 z-50 relative overflow-hidden">
       <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full blur-2xl -mr-12 -mt-12 pointer-events-none"></div>
       <div class="absolute bottom-0 left-0 w-24 h-24 bg-black opacity-5 rounded-full blur-xl -ml-8 -mb-8 pointer-events-none"></div>
       
@@ -95,35 +98,35 @@
       </div>
     </main>
 
-    <nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white/80 backdrop-blur-lg border-t border-gray-100 shadow-[0_-10px_40px_rgba(0,0,0,0.06)] rounded-t-[2rem] px-6 py-4 flex justify-between items-center z-50">
-      
-      <button onclick="renderDashboard()" class="nav-btn text-emerald-600 flex flex-col items-center gap-1.5 w-14">
-        <i class="fas fa-home text-xl"></i>
-        <span class="text-[10px] font-bold">Beranda</span>
-      </button>
-      
-      <button onclick="renderPembayaran()" class="nav-btn text-gray-400 flex flex-col items-center gap-1.5 w-14 hover:text-emerald-500">
-        <i class="fas fa-users text-xl"></i>
-        <span class="text-[10px] font-bold">Santri</span>
-      </button>
-      
-      <div class="relative -top-8 mx-2">
-        <button onclick="renderPembayaran()" class="bg-gradient-to-b from-emerald-400 to-emerald-600 text-white w-14 h-14 rounded-[20px] shadow-lg shadow-emerald-200 flex items-center justify-center text-xl border-4 border-white hover:scale-105 active:scale-95 transition-all duration-300 transform rotate-45 group">
-          <i class="fas fa-plus -rotate-45 group-hover:rotate-45 transition-transform duration-300"></i>
-        </button>
-      </div>
-      
-      <button onclick="renderLaporan()" class="nav-btn text-gray-400 flex flex-col items-center gap-1.5 w-14 hover:text-emerald-500">
-        <i class="fas fa-chart-pie text-xl"></i>
-        <span class="text-[10px] font-bold">Laporan</span>
-      </button>
-      
-      <button onclick="renderSetting()" class="nav-btn text-gray-400 flex flex-col items-center gap-1.5 w-14 hover:text-emerald-500">
-  <i class="fas fa-cog text-xl"></i>
-  <span class="text-[10px] font-bold">Setting</span>
-</button>
-	  
-    </nav>
+<nav class="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-[480px] bg-white border-t border-gray-100 shadow-[0_-4px_20px_rgba(0,0,0,0.05)] rounded-t-[2rem] px-2 py-3 grid grid-cols-5 items-center z-50">
+  
+  <button onclick="renderDashboard()" class="nav-btn text-gray-400 flex flex-col items-center gap-1">
+    <i class="fas fa-home text-lg"></i>
+    <span class="text-[9px] font-bold">Beranda</span>
+  </button>
+  
+  <button onclick="renderPembayaran()" class="nav-btn text-gray-400 flex flex-col items-center gap-1">
+    <i class="fas fa-users text-lg"></i>
+    <span class="text-[9px] font-bold">Santri</span>
+  </button>
+  
+  <button onclick="renderPembayaran()" class="flex flex-col items-center justify-center">
+    <div class="bg-emerald-600 text-white w-12 h-12 rounded-2xl shadow-lg shadow-emerald-200 flex items-center justify-center text-xl hover:scale-105 transition-transform">
+      <i class="fas fa-plus"></i>
+    </div>
+  </button>
+  
+  <button onclick="renderLaporan()" class="nav-btn text-gray-400 flex flex-col items-center gap-1">
+    <i class="fas fa-chart-pie text-lg"></i>
+    <span class="text-[9px] font-bold">Laporan</span>
+  </button>
+  
+  <button onclick="renderSetting()" class="nav-btn text-gray-400 flex flex-col items-center gap-1">
+    <i class="fas fa-cog text-lg"></i>
+    <span class="text-[9px] font-bold">Setting</span>
+  </button>
+  
+</nav>
 
   </div> <script src="app.js"></script>
 </body>
