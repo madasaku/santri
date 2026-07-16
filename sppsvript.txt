@@ -2,7 +2,7 @@
 function doGet(e) {
   try {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    
+
     // --- 1. AMBIL DATA SANTRI ---
     const sheetSantri = ss.getSheetByName("Data Santri");
     const santriList = [];
@@ -32,6 +32,7 @@ function doGet(e) {
         if (bayarRows[i][1]) {
           const nominal = Number(bayarRows[i][4]) || 0;
           pembayaranList.push({
+            row: i + 1, // TAMPILKAN BARIS ASLI GOOGLE SHEETS (Array index + 1)
             tanggal: bayarRows[i][0],
             nama: bayarRows[i][1].toString(),
             kelas: bayarRows[i][2].toString(),
@@ -43,31 +44,42 @@ function doGet(e) {
       }
     }
 
-    // --- 3. AMBIL PENGATURAN BIAYA DARI APPS SCRIPT (PROPERTIES) ---
-    const scriptProps = PropertiesService.getScriptProperties();
-    
-    // Tarik data dari script. Jika kosong, gunakan default
-    const settingBiaya = {
-      tk_ujian: Number(scriptProps.getProperty('tk_ujian')) || 50000,
-      tk_rapor: Number(scriptProps.getProperty('tk_rapor')) || 40000,
-      ibt_ujian: Number(scriptProps.getProperty('ibt_ujian')) || 100000,
-      ibt_rapor: Number(scriptProps.getProperty('ibt_rapor')) || 75000,
-      sana_ujian: Number(scriptProps.getProperty('sana_ujian')) || 150000,
-      sana_rapor: Number(scriptProps.getProperty('sana_rapor')) || 100000
+    // --- 3. AMBIL PENGATURAN BIAYA DARI TAB "Pengaturan" ---
+    const sheetSetting = ss.getSheetByName("Pengaturan");
+    let settingBiaya = {
+      tk_ujian: 50000, tk_rapor: 40000,
+      ibt_ujian: 100000, ibt_rapor: 75000,
+      sana_ujian: 150000, sana_rapor: 100000
     };
+    if (sheetSetting) {
+      const dataSetting = sheetSetting.getDataRange().getValues();
+      for (let i = 1; i < dataSetting.length; i++) {
+        const key = dataSetting[i][0];
+        const val = Number(dataSetting[i][1]);
+        if (key) settingBiaya[key] = val;
+      }
+    }
 
     // --- 4. SIAPKAN PAYLOAD UNTUK FRONTEND ---
     const data = {
       statistik: {
         totalSantri: santriList.length,
-        totalMasuk: totalMasuk,
-        saldo: totalMasuk
+        pemasukanUjian: pembayaranList.filter(p => p.jenis === 'Uang Ujian').reduce((sum, p) => sum + p.nominal, 0),
+        pemasukanRapor: pembayaranList.filter(p => p.jenis === 'Uang Rapor').reduce((sum, p) => sum + p.nominal, 0),
+        targetUjian: santriList.reduce((sum, s) => {
+            let t = s.kelas.includes('TK') ? settingBiaya.tk_ujian : (s.kelas.includes('IBT') ? settingBiaya.ibt_ujian : settingBiaya.sana_ujian);
+            return sum + t;
+        }, 0),
+        targetRapor: santriList.reduce((sum, s) => {
+            let t = s.kelas.includes('TK') ? settingBiaya.tk_rapor : (s.kelas.includes('IBT') ? settingBiaya.ibt_rapor : settingBiaya.sana_rapor);
+            return sum + t;
+        }, 0)
       },
       santri: santriList,
       pembayaran: pembayaranList,
       setting: settingBiaya
     };
-
+    
     return ContentService.createTextOutput(JSON.stringify(data))
       .setMimeType(ContentService.MimeType.JSON);
 
@@ -79,56 +91,136 @@ function doGet(e) {
 // Endpoint untuk menyimpan data (Method: POST)
 function doPost(e) {
   try {
-    // Validasi pencegah error CORS & data kosong
+    // Validasi pencegah error CORS
     if (!e || !e.postData || !e.postData.contents) {
       return ContentService.createTextOutput(JSON.stringify({ success: false, message: "Data kosong dikirim ke server." })).setMimeType(ContentService.MimeType.JSON);
     }
 
     const request = JSON.parse(e.postData.contents);
     const ss = SpreadsheetApp.getActiveSpreadsheet();
-    
+
     // --- AKSI: IMPORT SANTRI ---
     if (request.action === 'import_santri') {
       const sheet = ss.getSheetByName("Data Santri");
       const dataBaru = request.data;
       const barisBaru = dataBaru.map(santri => [santri.NIS, santri.Nama, santri.Kelas, "Belum Bayar"]);
       sheet.getRange(sheet.getLastRow() + 1, 1, barisBaru.length, barisBaru[0].length).setValues(barisBaru);
-      
       return ContentService.createTextOutput(JSON.stringify({ success: true, message: `${barisBaru.length} data santri berhasil diimport!` })).setMimeType(ContentService.MimeType.JSON);
     }
-    
-    // --- AKSI: SIMPAN PEMBAYARAN ---
-    if (request.action === 'simpan_pembayaran') {
+
+    if (request.action === 'hapus_pembayaran') {
       const sheet = ss.getSheetByName("Pembayaran");
-      if (sheet) {
-        sheet.appendRow([new Date(), request.data.nama, request.data.kelas, request.data.jenis, request.data.nominal]);
+      // Hapus + 1 karena frontend sekarang mengirimkan baris asli (row) dari sheet
+      sheet.deleteRow(request.data.index);
+      return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Data berhasil dihapus!" })).setMimeType(ContentService.MimeType.JSON);
+    }
+    
+    // --- AKSI: SIMPAN PEMBAYARAN (SISTEM CICILAN) ---
+    if (request.action === 'simpan_pembayaran') {
+      let sheetPembayaran = ss.getSheetByName("Pembayaran");
+      if (!sheetPembayaran) {
+        sheetPembayaran = ss.insertSheet("Pembayaran");
+        sheetPembayaran.appendRow(["Tanggal", "Nama Santri", "Kelas", "Jenis Pembayaran", "Nominal"]);
+        sheetPembayaran.getRange("A1:E1").setFontWeight("bold");
       }
+      
+      // Ambil Pengaturan Target
+      let sheetSetting = ss.getSheetByName("Pengaturan");
+      let settingBiaya = { tk_ujian: 50000, tk_rapor: 40000, ibt_ujian: 100000, ibt_rapor: 75000, sana_ujian: 150000, sana_rapor: 100000 };
+      if (sheetSetting) {
+        let dataSetting = sheetSetting.getDataRange().getValues();
+        for (let i = 1; i < dataSetting.length; i++) {
+          if (dataSetting[i][0]) settingBiaya[dataSetting[i][0]] = Number(dataSetting[i][1]);
+        }
+      }
+
+      // AMANKAN DATA DARI ERROR (Gunakan string kosong jika data tidak terkirim)
+      let namaInput = (request.data.nama || "").toString().trim();
+      let jenisInput = (request.data.jenis || "").toString().trim();
+      let kelasInput = (request.data.kelas || "").toString().trim(); 
+      let kelasTeks = kelasInput.toUpperCase();
+      let nominalInput = Number(request.data.nominal) || 0;
+      
+      // Tentukan target santri ini
+      let target = 0;
+      if (jenisInput === "Uang Ujian") {
+        if (kelasTeks.includes("TK")) target = settingBiaya.tk_ujian;
+        else if (kelasTeks.includes("IBT")) target = settingBiaya.ibt_ujian;
+        else if (kelasTeks.includes("SANA")) target = settingBiaya.sana_ujian;
+      } else {
+        if (kelasTeks.includes("TK")) target = settingBiaya.tk_rapor;
+        else if (kelasTeks.includes("IBT")) target = settingBiaya.ibt_rapor;
+        else if (kelasTeks.includes("SANA")) target = settingBiaya.sana_rapor;
+      }
+
+      // Hitung total cicilan di server
+      const dataTransaksi = sheetPembayaran.getDataRange().getValues();
+      let totalTerbayar = 0;
+      for (let i = 1; i < dataTransaksi.length; i++) {
+        let namaDiSheet = dataTransaksi[i][1] ? dataTransaksi[i][1].toString().trim() : "";
+        let jenisDiSheet = dataTransaksi[i][3] ? dataTransaksi[i][3].toString().trim() : "";
+        if (namaDiSheet === namaInput && jenisDiSheet === jenisInput) {
+          totalTerbayar += (Number(dataTransaksi[i][4]) || 0);
+        }
+      }
+
+      // Tolak jika kelebihan bayar (Hanya jika target terbaca)
+      if (target > 0) {
+        if (totalTerbayar >= target) {
+          return ContentService.createTextOutput(JSON.stringify({ success: false, message: `DITOLAK SERVER: Sudah LUNAS!` })).setMimeType(ContentService.MimeType.JSON);
+        }
+        if ((totalTerbayar + nominalInput) > target) {
+          return ContentService.createTextOutput(JSON.stringify({ success: false, message: `DITOLAK SERVER: Nominal terlalu besar!` })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+
+      // Simpan jika aman
+      sheetPembayaran.appendRow([new Date(), namaInput, kelasInput, jenisInput, nominalInput]);
+      
+      // Update status di tab "Data Santri"
+      let sheetSantri = ss.getSheetByName("Data Santri");
+      if (sheetSantri) {
+        let dataSantri = sheetSantri.getDataRange().getValues();
+        for (let i = 1; i < dataSantri.length; i++) {
+          if (dataSantri[i][1] === namaInput) { 
+            sheetSantri.getRange(i + 1, 4).setValue("Ada Pembayaran");
+            break; 
+          }
+        }
+      }
+
       return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Pembayaran berhasil dicatat!" })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // --- AKSI: SIMPAN SETTING BIAYA KE DALAM APPS SCRIPT ---
+    // --- AKSI: SIMPAN SETTING BIAYA KE TAB GOOGLE SHEETS ---
     if (request.action === 'simpan_setting') {
+      let sheetSetting = ss.getSheetByName("Pengaturan");
+      // Buat tab jika tidak sengaja terhapus
+      if (!sheetSetting) {
+        sheetSetting = ss.insertSheet("Pengaturan");
+      }
+      
+      // Bersihkan tab lama, lalu isi ulang
+      sheetSetting.clear();
       const set = request.data;
-      const scriptProps = PropertiesService.getScriptProperties();
-      
-      // Simpan data langsung ke memori internal Google Apps Script
-      scriptProps.setProperties({
-        'tk_ujian': set.tk_ujian.toString(),
-        'tk_rapor': set.tk_rapor.toString(),
-        'ibt_ujian': set.ibt_ujian.toString(),
-        'ibt_rapor': set.ibt_rapor.toString(),
-        'sana_ujian': set.sana_ujian.toString(),
-        'sana_rapor': set.sana_rapor.toString()
-      });
-      
+      const rows = [
+        ["Key", "Value"],
+        ["tk_ujian", set.tk_ujian], 
+        ["tk_rapor", set.tk_rapor],
+        ["ibt_ujian", set.ibt_ujian], 
+        ["ibt_rapor", set.ibt_rapor],
+        ["sana_ujian", set.sana_ujian], 
+        ["sana_rapor", set.sana_rapor]
+      ];
+      // Suntikkan data ke dalam sel Google Sheets
+      sheetSetting.getRange(1, 1, rows.length, 2).setValues(rows);
       return ContentService.createTextOutput(JSON.stringify({ 
         success: true, 
-        message: "Pengaturan harga berhasil disimpan di sistem server!" 
+        message: "Mantap! Pengaturan berhasil dicatat di tab Google Sheets." 
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
     return ContentService.createTextOutput(JSON.stringify({ success: false, message: "Aksi tidak dikenali." })).setMimeType(ContentService.MimeType.JSON);
-
   } catch (error) {
     return ContentService.createTextOutput(JSON.stringify({ success: false, message: error.toString() })).setMimeType(ContentService.MimeType.JSON);
   }

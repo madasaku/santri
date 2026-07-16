@@ -1,5 +1,5 @@
-// GANTI DENGAN URL WEB APP GAS ANDA
-const API_URL = 'https://script.google.com/macros/s/AKfycbxf5smHZ465NH5yxqrzuU6UkKh6Da4JppaAFxZMrWLq-T79c3NPEjzJxiS-YbzbsoYk_Q/exec';
+// GANTI DENGAN URL WEB APP GAS ANDA YANG BARU SETELAH DEPLOY!
+const API_URL = 'https://script.google.com/macros/s/AKfycbwSIp-7aT6zrG-32qWpSxfmR8K4OeWFhuVgvEY42io8IKFEO2ASWCICWwmTnxFOz49YVw/exec';
 let appData = null;
 
 // Pendaftaran Service Worker untuk PWA
@@ -104,14 +104,20 @@ function renderPembayaran(filterManual = null) {
     <div class="max-w-2xl mx-auto fade-in pb-20 pt-2 px-2">
       <div class="relative mb-4">
         <select onchange="renderPembayaran(this.value)" class="w-full bg-white border border-gray-100 shadow-sm rounded-2xl px-4 py-3 text-sm font-bold text-gray-700 outline-none focus:border-emerald-500 appearance-none cursor-pointer">
-          <option value="Semua" ${filterTingkat === 'Semua' ? 'selected' : ''}>🌍 Semua Data Santri</option>
+          <option value="Semua" ${filterTingkat === 'Semua' ? 'selected' : ''}>📋 Semua Data Santri</option>
           <optgroup label="Tingkatan">
             <option value="TK" ${filterTingkat === 'TK' ? 'selected' : ''}>🏫 TK</option>
             <option value="IBT" ${filterTingkat === 'IBT' ? 'selected' : ''}>🏫 Ibtidaiyah (IBT)</option>
             <option value="SANA" ${filterTingkat === 'SANA' ? 'selected' : ''}>🏫 Sanawiyah (SANA)</option>
           </optgroup>
-          <optgroup label="Kelas Spesifik">
-            ${uniqueClasses.map(c => `<option value="${c}" ${filterTingkat === c ? 'selected' : ''}>📍 ${c}</option>`).join('')}
+         <optgroup label="Kelas Spesifik - TK">
+            ${uniqueClasses.filter(c => c.toUpperCase().includes('TK')).map(c => `<option value="${c}" ${filterTingkat === c ? 'selected' : ''}>📌 ${c}</option>`).join('')}
+          </optgroup>
+          <optgroup label="Kelas Spesifik - Ibtidaiyah">
+            ${uniqueClasses.filter(c => c.toUpperCase().includes('IBT')).map(c => `<option value="${c}" ${filterTingkat === c ? 'selected' : ''}>📌 ${c}</option>`).join('')}
+          </optgroup>
+          <optgroup label="Kelas Spesifik - Sanawiyah">
+            ${uniqueClasses.filter(c => c.toUpperCase().includes('SANA')).map(c => `<option value="${c}" ${filterTingkat === c ? 'selected' : ''}>📌 ${c}</option>`).join('')}
           </optgroup>
         </select>
         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-emerald-500">
@@ -294,8 +300,11 @@ function lihatRiwayat(namaSantri, event) {
           <p class="text-xs font-bold text-gray-800 uppercase">${r.jenis}</p>
           <p class="text-[10px] text-gray-400 mt-0.5"><i class="far fa-calendar-alt"></i> ${new Date(r.tanggal).toLocaleDateString('id-ID', {day: 'numeric', month: 'short'})}</p>
         </div>
-        <div class="text-right font-bold text-emerald-600 text-sm">
-          + Rp ${r.nominal.toLocaleString('id-ID')}
+        <div class="text-right font-bold text-emerald-600 text-sm flex items-center gap-3">
+          <span>+ Rp ${r.nominal.toLocaleString('id-ID')}</span>
+          <button onclick="konfirmasiHapus(${r.row})" class="text-red-400 hover:text-red-600 transition-colors p-1 rounded-md hover:bg-red-50">
+            <i class="fas fa-trash-alt"></i>
+          </button>
         </div>
       </div>
     `).join('');
@@ -315,6 +324,38 @@ function lihatRiwayat(namaSantri, event) {
     showConfirmButton: false,
     customClass: { popup: 'rounded-[32px] bg-gray-50' }
   });
+} // <---- INI ADALAH PENUTUP KURUNG KURAWAL YANG SEBELUMNYA HILANG!
+
+// ==========================================
+// FUNGSI HAPUS (Dikeluarkan agar bisa diakses HTML)
+// ==========================================
+function konfirmasiHapus(rowIndex) {
+  Swal.fire({
+    title: 'Hapus Transaksi?',
+    text: "Data ini akan dihapus dari database secara permanen.",
+    icon: 'warning',
+    showCancelButton: true,
+    confirmButtonColor: '#d33',
+    confirmButtonText: 'Ya, Hapus!'
+  }).then((result) => {
+    if (result.isConfirmed) {
+      kirimHapusKeServer(rowIndex);
+    }
+  });
+}
+
+async function kirimHapusKeServer(index) {
+  Swal.fire({ title: 'Menghapus...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+  
+  try {
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      body: JSON.stringify({ action: 'hapus_pembayaran', data: { index: index } })
+    });
+    location.reload(); // Refresh setelah hapus
+  } catch (error) {
+    Swal.fire('Error', 'Gagal menghapus data', 'error');
+  }
 }
 
 // ==========================================
@@ -439,7 +480,7 @@ async function kirimDataImportKeServer(dataSantri) {
 // ==========================================
 // FITUR LAPORAN & GRAFIK
 // ==========================================
-function renderLaporan(tabAktif = 'Semua') {
+function renderLaporan(tabAktif = 'Uang Ujian') {
   updateNav(3); 
   if (!appData) return;
 
@@ -466,10 +507,9 @@ function renderLaporan(tabAktif = 'Semua') {
   const totalSisa = totalTarget - totalMasuk;
   const persentase = totalTarget === 0 ? 0 : Math.round((totalMasuk / totalTarget) * 100);
 
-  document.getElementById('app-content').innerHTML = `
-    <div class="max-w-2xl mx-auto fade-in pb-12 pt-2 px-2">
+document.getElementById('app-content').innerHTML = `
+    <div class="max-w-2xl mx-auto pb-12 pt-2 px-2">
       <div class="flex bg-gray-200/70 p-1.5 rounded-2xl mb-6 shadow-inner">
-        <button onclick="renderLaporan('Semua')" class="flex-1 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 ${tabAktif === 'Semua' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}">Semua</button>
         <button onclick="renderLaporan('Uang Ujian')" class="flex-1 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 ${tabAktif === 'Uang Ujian' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}">Ujian</button>
         <button onclick="renderLaporan('Uang Rapor')" class="flex-1 py-2.5 text-xs font-bold rounded-xl transition-all duration-300 ${tabAktif === 'Uang Rapor' ? 'bg-white text-emerald-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}">Rapor</button>
       </div>
