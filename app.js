@@ -47,22 +47,53 @@ if ('serviceWorker' in navigator) {
     .catch(err => console.log('Service Worker gagal', err));
 }
 
-// Fetch Data saat aplikasi dimuat
+// ==========================================
+// KODE BARU: PENGATURAN PASSWORD SISTEM
+// ==========================================
+const PIN_SISTEM = "112233"; // Silakan ganti PIN ini sesuai keinginan Anda
+
+// Fetch Data saat aplikasi dimuat (VERSI SELALU TERKUNCI)
 window.onload = async () => {
-  // Mencatat state beranda pertama kali
+  // Sistem akan langsung menahan layar dan memunculkan form login
+  document.getElementById('login-screen').classList.remove('hidden');
+};
+
+// ==========================================
+// KODE BARU: FUNGSI PROSES VERIFIKASI
+// ==========================================
+function prosesLogin() {
+  const password = document.getElementById('inputPassword').value;
+  
+  if (password === PIN_SISTEM) {
+    // Langsung buka aplikasi tanpa menyimpan jejak login di browser
+    tampilkanAplikasiUtama();
+  } else {
+    Swal.fire({
+      icon: 'error',
+      title: 'Akses Ditolak',
+      text: 'PIN yang Anda masukkan salah!',
+      confirmButtonColor: '#0f766e'
+    });
+    document.getElementById('inputPassword').value = ''; // Kosongkan form otomatis
+  }
+}
+
+async function tampilkanAplikasiUtama() {
+  // Transisi UI dari Layar Kunci ke Aplikasi Utama
+  document.getElementById('login-screen').classList.add('hidden');
+  document.getElementById('main-app').classList.remove('hidden');
+  
   history.replaceState({ page: 'dashboard' }, "", "#beranda");
   
   try {
     const response = await fetch(API_URL);
     appData = await response.json();
     
-    // UBAH BARIS INI: Tambahkan kata "true" di dalam kurung
     renderDashboard(true); 
-    
   } catch (error) {
     Swal.fire('Error', 'Gagal memuat data dari server. Periksa koneksi Anda.', 'error');
   }
-};
+}
 
 function renderDashboard(isBack = false) {
   if (!isBack) history.pushState({ page: 'dashboard' }, "", "#beranda");

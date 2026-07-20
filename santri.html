@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pantauan Pembayaran Santri MADASA</title>
+  
+  <!-- ========================================== -->
+  <!-- KODE BARU: Favicon, Meta Deskripsi & Gambar WA -->
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
+  <meta name="description" content="Portal resmi pengecekan status pembayaran Uang Ujian dan Uang Rapor santri MADASA secara online dan real-time.">
+  <meta property="og:title" content="Pantauan Pembayaran Santri MADASA">
+  <meta property="og:description" content="Portal resmi pengecekan status pembayaran Uang Ujian dan Uang Rapor santri MADASA secara online dan real-time.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://santri.madasa.web.id/logo.png"> 
+  <!-- ========================================== -->
+  
+  <!-- Font & Icon -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: { 
+        extend: { 
+          fontFamily: { sans: ['Outfit', 'sans-serif'] },
+          colors: { teal: { 500: '#14b8a6', 600: '#0d9488', 700: '#0f766e' } } 
+        } 
+      }
+    }
+  </script>
+  
+  <style>
+    body { background-color: #f3f4f6; }
+    .mobile-container { max-width: 480px; margin: 0 auto; background-color: #fafaf9; min-height: 100vh; box-shadow: 0 0 50px rgba(0,0,0,0.05); }
+    .fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .spinner { border: 3px solid rgba(20, 184, 166, 0.3); border-top: 3px solid #0d9488; border-radius: 50%; width: 30px; height: 30px; animation: spin 1s linear infinite; margin: 0 auto; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+
+
+<body class="text-gray-800 font-sans antialiased">
+
+  <div class="mobile-container pb-2">
+    <!-- Header Publik -->
+    <header class="bg-gradient-to-r from-teal-700 to-teal-600 text-white p-6 rounded-b-[2rem] shadow-md relative overflow-hidden text-center">
+      <div class="relative z-10">
+        <div class="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30 mx-auto mb-3 shadow-inner">
+          <i class="fas fa-search-dollar text-2xl"></i>
+        </div>
+        <h1 class="text-xl font-bold tracking-tight">Portal Informasi Tagihan</h1>
+        <p class="text-xs text-emerald-100 mt-1 opacity-90">Cek Status Pembayaran Santri MADASA</p>
+      </div>
+    </header>
+
+    <!-- Loading State -->
+    <div id="loading" class="text-center py-20">
+      <div class="spinner mb-3"></div>
+      <p class="text-sm text-gray-500 font-medium">Sedang mengambil data terbaru...</p>
+    </div>
+
+    <!-- Konten Utama (Disembunyikan saat loading) -->
+    <main id="app-content" class="hidden px-6 pt-6">
+      
+<!-- Tab Pemilihan -->
+      <div class="flex bg-gray-200/70 p-1.5 rounded-2xl mb-6 shadow-inner">
+        <button id="tab-ujian" onclick="renderData('Uang Ujian')" class="flex-1 py-3 text-xs font-bold rounded-xl transition-all duration-300 bg-white text-teal-600 shadow-sm">Uang Ujian</button>
+        <button id="tab-rapor" onclick="renderData('Uang Rapor')" class="flex-1 py-3 text-xs font-bold rounded-xl transition-all duration-300 text-gray-500 hover:text-gray-700">Uang Rapor</button>
+      </div>
+
+      <!-- ========================================== -->
+      <!-- KODE BARU: Dropdown Filter Kelas -->
+      <div class="mb-6">
+        <select id="filterKelas" onchange="renderData(tabAktif)" class="w-full p-3 rounded-xl border border-gray-200 font-bold text-gray-700 bg-white shadow-sm outline-none focus:border-teal-500 transition-all cursor-pointer text-sm">
+            <option value="semua">-- Tampilkan Semua Kelas --</option>
+        </select>
+      </div>
+      <!-- ========================================== -->
+
+
+      <!-- Kartu Statistik -->
+      <div class="grid grid-cols-2 gap-3 mb-6">
+        <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-3xl text-center shadow-sm">
+          <p class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-1">Sudah Lunas</p>
+          <h3 id="stat-lunas" class="text-3xl font-black text-emerald-700">0</h3>
+        </div>
+        <div class="bg-red-50 border border-red-100 p-4 rounded-3xl text-center shadow-sm">
+          <p class="text-[10px] text-red-600 font-bold uppercase tracking-wider mb-1">Belum Lunas</p>
+          <h3 id="stat-belum" class="text-3xl font-black text-red-700">0</h3>
+        </div>
+      </div>
+
+	
+	<!-- Area Daftar Santri -->
+      <div id="list-santri" class="flex flex-col gap-3"></div>
+      
+    </main>
+
+<!-- ========================================== -->
+    <!-- KODE BARU: FOOTER PEMBATAS (SANGAT COMPACT) -->
+    <footer class="mt-4 pb-2 pt-4 border-t border-gray-200/60 text-center mx-6">
+      <div class="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-1.5 text-gray-400">
+        <i class="fas fa-shield-alt text-[10px]"></i>
+      </div>
+      <p class="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Biro Keuangan MADASA</p>
+      <p class="text-[9px] font-medium text-gray-400 mt-0.5">&copy; 2026 Seluruh hak cipta dilindungi.</p>
+    </footer>
+    <!-- ========================================== -->
+	
+	
+  </div>
+
+  <script>
+    // URL API SAMA DENGAN APLIKASI UTAMA
+    const API_URL = 'https://script.google.com/macros/s/AKfycbwrrDxMU9ubQITGHuyRnkxP4y7KcCB2chMNy6lqzefelnHdzfFbnTcnsdtVzrv7oT3ulg/exec';
+    let appData = null;
+    let tabAktif = 'Uang Ujian';
+
+
+// Fetch data saat halaman dibuka
+    window.onload = async () => {
+      try {
+        const response = await fetch(API_URL);
+        appData = await response.json();
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('app-content').classList.remove('hidden');
+        document.getElementById('app-content').classList.add('fade-in');
+        
+        // --- TAMBAHKAN BARIS INI ---
+        loadOpsiKelas(); 
+        // ---------------------------
+        
+        renderData('Uang Ujian');
+      } catch (error) {
+        document.getElementById('loading').innerHTML = `<i class="fas fa-wifi text-3xl text-red-400 mb-2"></i><p class="text-sm text-red-500">Gagal memuat data. Periksa koneksi internet Anda.</p>`;
+      }
+    };
+	
+	// --- KODE BARU: Fungsi untuk mengisi opsi kelas otomatis ---
+    function loadOpsiKelas() {
+      const selectKelas = document.getElementById('filterKelas');
+      if (!selectKelas || !appData) return;
+      
+      const semuaKelas = appData.santri.map(s => s.kelas).filter(k => k);
+      const kelasUnik = [...new Set(semuaKelas)].sort();
+      
+      kelasUnik.forEach(kelas => {
+        const option = document.createElement('option');
+        option.value = kelas;
+        option.textContent = kelas;
+        selectKelas.appendChild(option);
+      });
+    }
+    // ----------------------------------------------------------
+
+    function renderData(jenisTagihan) {
+      tabAktif = jenisTagihan;
+      if (!appData) return;
+
+      // Ubah tampilan Tab
+      const tabUjian = document.getElementById('tab-ujian');
+      const tabRapor = document.getElementById('tab-rapor');
+      if(jenisTagihan === 'Uang Ujian') {
+        tabUjian.className = "flex-1 py-3 text-xs font-bold rounded-xl transition-all duration-300 bg-white text-teal-600 shadow-sm";
+        tabRapor.className = "flex-1 py-3 text-xs font-bold rounded-xl transition-all duration-300 text-gray-500 hover:text-gray-700";
+      } else {
+        tabRapor.className = "flex-1 py-3 text-xs font-bold rounded-xl transition-all duration-300 bg-white text-teal-600 shadow-sm";
+        tabUjian.className = "flex-1 py-3 text-xs font-bold rounded-xl transition-all duration-300 text-gray-500 hover:text-gray-700";
+      }
+
+
+const setting = appData.setting || { tk_ujian: 50000, tk_rapor: 40000, ibt_ujian: 100000, ibt_rapor: 75000, sana_ujian: 150000, sana_rapor: 100000 };
+      
+      // --- KODE BARU: Logika Filter Kelas ---
+      const kelasDipilih = document.getElementById('filterKelas') ? document.getElementById('filterKelas').value : 'semua';
+      let santriDifilter = appData.santri;
+      
+      if (kelasDipilih !== 'semua') {
+        santriDifilter = appData.santri.filter(s => s.kelas === kelasDipilih);
+      }
+      // --------------------------------------
+      
+      // Hitung Data
+      // PERHATIKAN: Ganti "appData.santri.map" menjadi "santriDifilter.map"
+      const dataSantri = santriDifilter.map(s => {
+        const kelasTeks = s.kelas.toUpperCase();
+        let target = 0;
+
+        
+        if (jenisTagihan === 'Uang Ujian') {
+          if (kelasTeks.includes('TK')) target = setting.tk_ujian;
+          else if (kelasTeks.includes('IBT')) target = setting.ibt_ujian;
+          else if (kelasTeks.includes('SANA')) target = setting.sana_ujian;
+        } else {
+          if (kelasTeks.includes('TK')) target = setting.tk_rapor;
+          else if (kelasTeks.includes('IBT')) target = setting.ibt_rapor;
+          else if (kelasTeks.includes('SANA')) target = setting.sana_rapor;
+        }
+
+       const riwayat = appData.pembayaran.filter(p => 
+  p.nama.trim().toLowerCase() === s.nama.trim().toLowerCase() && 
+  p.jenis.trim().toLowerCase() === jenisTagihan.trim().toLowerCase()
+);
+        const totalBayar = riwayat.reduce((sum, p) => sum + p.nominal, 0);
+        const sisa = target - totalBayar;
+        const status = sisa <= 0 ? 'Lunas' : 'Belum';
+        return { ...s, totalBayar, target, sisa, status };
+      });
+
+      // Urutkan: Yang "Belum" di atas
+      dataSantri.sort((a, b) => {
+        if (a.status === 'Belum' && b.status === 'Lunas') return -1;
+        if (a.status === 'Lunas' && b.status === 'Belum') return 1;
+        return a.nama.localeCompare(b.nama);
+      });
+
+      // Update Statistik
+      const totalLunas = dataSantri.filter(s => s.status === 'Lunas').length;
+      document.getElementById('stat-lunas').innerText = totalLunas;
+      document.getElementById('stat-belum').innerText = dataSantri.length - totalLunas;
+
+      // Render List
+      document.getElementById('list-santri').innerHTML = dataSantri.map((s, idx) => `
+        <div class="bg-white p-4 rounded-[20px] shadow-sm border border-gray-100 flex justify-between items-center overflow-hidden">
+          <div class="flex items-center gap-3.5 flex-1 min-w-0">
+            <div class="w-10 h-10 min-w-[40px] rounded-full ${s.status === 'Lunas' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-500 border-red-100'} flex items-center justify-center font-bold text-sm border">
+              ${idx + 1}
+            </div>
+            <div class="truncate">
+              <h4 class="font-bold text-sm text-gray-800 truncate">${s.nama}</h4>
+              <p class="text-[10px] text-gray-400 mt-0.5 truncate">${s.kelas}</p>
+            </div>
+          </div>
+          <div class="text-right flex-shrink-0 ml-3">
+            ${s.status === 'Lunas' 
+              ? `<span class="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider"><i class="fas fa-check-double mr-1"></i> LUNAS</span>`
+              : `<div class="flex flex-col items-end">
+                  <span class="bg-red-100 text-red-700 px-3 py-1 rounded-lg text-[10px] font-bold mb-1 tracking-wider"><i class="fas fa-times mr-1"></i> BELUM</span>
+                  <span class="text-[9px] font-bold text-gray-400">Kurang Rp ${s.sisa.toLocaleString('id-ID')}</span>
+                 </div>`
+            }
+          </div>
+        </div>
+      `).join('');
+    }
+  </script>
+</body>
+</html>
