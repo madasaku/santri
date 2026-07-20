@@ -1,5 +1,5 @@
 // GANTI DENGAN URL WEB APP GAS ANDA YANG BARU SETELAH DEPLOY!
-const API_URL = 'https://script.google.com/macros/s/AKfycbwrrDxMU9ubQITGHuyRnkxP4y7KcCB2chMNy6lqzefelnHdzfFbnTcnsdtVzrv7oT3ulg/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbw8iI_XmzRv-MCCbidcmd26-uutipJejEvR2fTf3NDtyAquCifNuG9uG_Y88sq3V2ec5A/exec';
 let appData = null;
 
 
@@ -644,20 +644,27 @@ document.getElementById('app-content').innerHTML = `
       <div>
         <h3 class="text-[11px] font-bold text-gray-500 mb-4 uppercase tracking-wider flex items-center gap-2"><i class="fas fa-history text-emerald-500 text-sm"></i> Riwayat Transaksi Terbaru</h3>
         ${dataTerfilter.length === 0 ? '<div class="text-center py-10 text-xs text-gray-400">Belum ada transaksi.</div>' : ''}
-        <div class="flex flex-col gap-3">
-          ${dataTerfilter.map(t => `
-            <div class="bg-white p-4 rounded-[20px] shadow-sm border border-gray-100 flex justify-between items-center">
-              <div class="flex items-center gap-3.5">
-                <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600"><i class="fas fa-check-circle"></i></div>
-                <div>
-                  <h4 class="font-bold text-sm text-gray-800">${t.nama}</h4>
-                  <p class="text-[10px] text-gray-400 mt-0.5">${t.kelas} • ${new Date(t.tanggal).toLocaleDateString('id-ID')}</p>
+      <div class="flex flex-col gap-3">
+          ${dataTerfilter.map((t, index) => `
+            <div class="bg-white p-4 rounded-[20px] shadow-sm border border-gray-100 flex justify-between items-center overflow-hidden">
+              
+              <!-- Bagian Kiri: Nomor, Nama, dan Tanggal -->
+              <div class="flex items-center gap-3.5 flex-1 min-w-0">
+                <div class="w-10 h-10 min-w-[40px] rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 font-bold text-sm border border-emerald-100">
+                  ${index + 1}
+                </div>
+                <div class="truncate">
+                  <h4 class="font-bold text-sm text-gray-800 truncate">${t.nama}</h4>
+                  <p class="text-[10px] text-gray-400 mt-0.5 truncate">${t.kelas} • ${new Date(t.tanggal).toLocaleDateString('id-ID')}</p>
                 </div>
               </div>
-              <div class="text-right">
+              
+              <!-- Bagian Kanan: Nominal dan Jenis -->
+              <div class="text-right flex-shrink-0 ml-3">
                 <p class="text-sm font-bold text-emerald-600">+ Rp ${t.nominal.toLocaleString('id-ID')}</p>
-                <p class="text-[9px] font-medium text-gray-400 mt-1 uppercase">${t.jenis}</p>
+                <p class="text-[9px] font-medium text-gray-400 mt-1 uppercase tracking-wider">${t.jenis}</p>
               </div>
+              
             </div>
           `).join('')}
         </div>
