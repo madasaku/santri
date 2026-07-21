@@ -182,8 +182,8 @@ function renderPembayaran(filterManual = null, isBack = false) {
         <div class="w-10 h-10 min-w-[40px] bg-teal-50 rounded-full flex items-center justify-center text-teal-600 font-bold text-sm border border-teal-100">
           ${index + 1}
         </div>
-        <div>
-          <h4 class="font-bold text-sm">${s.nama}</h4>
+       <div class="flex-1 pr-2">
+          <h4 class="font-bold text-sm break-words leading-tight">${s.nama}</h4>
           <p class="text-xs text-gray-500">${s.nis} • ${s.kelas}</p>
         </div>
       </div>
@@ -705,13 +705,13 @@ document.getElementById('app-content').innerHTML = `
             <div class="bg-white p-4 rounded-[20px] shadow-sm border border-gray-100 flex justify-between items-center overflow-hidden">
               
               <!-- Bagian Kiri: Nomor, Nama, dan Tanggal -->
-              <div class="flex items-center gap-3.5 flex-1 min-w-0">
+              <div class="flex items-center gap-3.5 flex-1">
                 <div class="w-10 h-10 min-w-[40px] rounded-full ${warnaIkon} flex items-center justify-center font-bold text-sm border">
                   ${index + 1}
                 </div>
-                <div class="truncate">
-                  <h4 class="font-bold text-sm text-gray-800 truncate">${t.nama}</h4>
-                  <p class="text-[10px] text-gray-400 mt-0.5 truncate">${t.kelas} • ${new Date(t.tanggal).toLocaleDateString('id-ID')}</p>
+                <div class="flex-1 pr-2">
+                  <h4 class="font-bold text-sm text-gray-800 break-words leading-tight">${t.nama}</h4>
+                  <p class="text-[10px] text-gray-400 mt-0.5">${t.kelas} • ${new Date(t.tanggal).toLocaleDateString('id-ID')}</p>
                 </div>
               </div>
               
@@ -722,6 +722,7 @@ document.getElementById('app-content').innerHTML = `
               </div>
               
             </div>
+           
           `}).join('')}
         </div>
 	 
