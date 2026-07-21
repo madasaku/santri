@@ -10,13 +10,13 @@ function doGet(e) {
       const dataRows = sheetSantri.getDataRange().getValues();
       for (let i = 1; i < dataRows.length; i++) {
         if (dataRows[i][0] || dataRows[i][1]) {
-          santriList.push({
-            id: i,
-            nis: dataRows[i][0].toString(),
-            nama: dataRows[i][1].toString(),
-            kelas: dataRows[i][2].toString(),
-            status: dataRows[i][3] ? dataRows[i][3].toString() : "Belum Bayar"
-          });
+        santriList.push({
+                id: i,
+                nis: dataRows[i][0].toString().trim(),
+                nama: dataRows[i][1].toString().trim(),
+                kelas: dataRows[i][2].toString().trim(),
+                status: dataRows[i][3] ? dataRows[i][3].toString().trim() : "Belum Bayar"
+              });
         }
       }
     }
@@ -31,14 +31,14 @@ function doGet(e) {
       for (let i = 1; i < bayarRows.length; i++) {
         if (bayarRows[i][1]) {
           const nominal = Number(bayarRows[i][4]) || 0;
-          pembayaranList.push({
-            row: i + 1, // TAMPILKAN BARIS ASLI GOOGLE SHEETS
-            tanggal: bayarRows[i][0],
-            nama: bayarRows[i][1].toString(),
-            kelas: bayarRows[i][2].toString(),
-            jenis: bayarRows[i][3].toString(),
-            nominal: nominal
-          });
+       pembayaranList.push({
+                row: i + 1, // TAMPILKAN BARIS ASLI GOOGLE SHEETS (Array index + 1)
+                tanggal: bayarRows[i][0],
+                nama: bayarRows[i][1].toString().trim(),
+                kelas: bayarRows[i][2].toString().trim(),
+                jenis: bayarRows[i][3].toString().trim(),
+                nominal: nominal
+              });
           totalMasuk += nominal;
         }
       }
@@ -232,8 +232,7 @@ function doPost(e) {
       sheetSetting.getRange(1, 1, rows.length, 2).setValues(rows);
       return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Pengaturan berhasil dicatat!" })).setMimeType(ContentService.MimeType.JSON);
     }
-
-    // --- AKSI BARU: SIMPAN PENGELUARAN ---
+// --- AKSI BARU: SIMPAN PENGELUARAN ---
     if (request.action === 'simpan_pengeluaran') {
       let sheetPengeluaran = ss.getSheetByName("Pengeluaran");
       
@@ -248,6 +247,43 @@ function doPost(e) {
       let nominal = Number(request.data.nominal) || 0;
       let keterangan = (request.data.keterangan || "").toString().trim();
       
+      // ==========================================
+      // PENAMBAHAN KEAMANAN: VALIDASI SALDO DI BACKEND
+      // ==========================================
+      // 1. Hitung Total Pemasukan untuk Kategori (Kas) ini
+      let sheetPembayaran = ss.getSheetByName("Pembayaran");
+      let totalPemasukan = 0;
+      if (sheetPembayaran) {
+        let dataMasuk = sheetPembayaran.getDataRange().getValues();
+        for (let i = 1; i < dataMasuk.length; i++) {
+          let jenisMasuk = dataMasuk[i][3] ? dataMasuk[i][3].toString().trim() : "";
+          if (jenisMasuk === kategori) {
+            totalPemasukan += (Number(dataMasuk[i][4]) || 0);
+          }
+        }
+      }
+
+      // 2. Hitung Total Pengeluaran Terdahulu untuk Kategori ini
+      let totalPengeluaranTerdahulu = 0;
+      let dataKeluar = sheetPengeluaran.getDataRange().getValues();
+      for (let i = 1; i < dataKeluar.length; i++) {
+        let jenisKeluar = dataKeluar[i][1] ? dataKeluar[i][1].toString().trim() : "";
+        if (jenisKeluar === kategori) {
+          totalPengeluaranTerdahulu += (Number(dataKeluar[i][2]) || 0);
+        }
+      }
+
+      // 3. Kalkulasi Saldo Aktual dan Blokir jika Minus
+      let saldoAktual = totalPemasukan - totalPengeluaranTerdahulu;
+      if (nominal > saldoAktual) {
+        return ContentService.createTextOutput(JSON.stringify({ 
+          success: false, 
+          message: `DITOLAK SERVER: Saldo Kas ${kategori} tidak mencukupi! Sisa saldo aktual: Rp ${saldoAktual}` 
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      // ==========================================
+
+      // Jika aman, simpan data pengeluaran
       sheetPengeluaran.appendRow([new Date(), kategori, nominal, keterangan]);
       
       return ContentService.createTextOutput(JSON.stringify({ success: true, message: "Pengeluaran berhasil dicatat!" })).setMimeType(ContentService.MimeType.JSON);

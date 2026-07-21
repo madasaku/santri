@@ -1,5 +1,5 @@
 // GANTI DENGAN URL WEB APP GAS ANDA YANG BARU SETELAH DEPLOY!
-const API_URL = 'https://script.google.com/macros/s/AKfycbw8iI_XmzRv-MCCbidcmd26-uutipJejEvR2fTf3NDtyAquCifNuG9uG_Y88sq3V2ec5A/exec';
+const API_URL = 'https://script.google.com/macros/s/AKfycbwrPWOrKcPSdzxYXQ6Tkdc8z3qzVMj2rwszhPdqJgd9a-ADP8Iqyh2hfLos6t7UtB-iAw/exec';
 let appData = null;
 
 
@@ -675,13 +675,38 @@ document.getElementById('app-content').innerHTML = `
       <div>
         <h3 class="text-[11px] font-bold text-gray-500 mb-4 uppercase tracking-wider flex items-center gap-2"><i class="fas fa-history text-emerald-500 text-sm"></i> Riwayat Transaksi Terbaru</h3>
         ${dataTerfilter.length === 0 ? '<div class="text-center py-10 text-xs text-gray-400">Belum ada transaksi.</div>' : ''}
-      <div class="flex flex-col gap-3">
-          ${dataTerfilter.map((t, index) => `
+     
+	 <div class="flex flex-col gap-3">
+          ${dataTerfilter.map((t, index) => {
+            // 1. Ambil target biaya berdasarkan kelas dan jenis transaksi
+            let target = 0;
+            const kelasTeks = t.kelas.toUpperCase();
+            if (t.jenis === 'Uang Ujian') {
+              if (kelasTeks.includes('TK')) target = settingBiaya.tk_ujian;
+              else if (kelasTeks.includes('IBT')) target = settingBiaya.ibt_ujian;
+              else if (kelasTeks.includes('SANA')) target = settingBiaya.sana_ujian;
+            } else {
+              if (kelasTeks.includes('TK')) target = settingBiaya.tk_rapor;
+              else if (kelasTeks.includes('IBT')) target = settingBiaya.ibt_rapor;
+              else if (kelasTeks.includes('SANA')) target = settingBiaya.sana_rapor;
+            }
+
+            // 2. Hitung total yang sudah dibayar santri ini untuk jenis transaksi tersebut (sampai saat ini)
+            const totalTerbayar = dataBayar
+              .filter(p => p.nama === t.nama && p.jenis === t.jenis)
+              .reduce((sum, p) => sum + p.nominal, 0);
+
+            // 3. Tentukan warna berdasarkan status lunas atau nyicil
+            const isLunas = totalTerbayar >= target;
+            const warnaTeks = isLunas ? 'text-emerald-600' : 'text-orange-500';
+            const warnaIkon = isLunas ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-orange-50 text-orange-500 border-orange-100';
+
+            return `
             <div class="bg-white p-4 rounded-[20px] shadow-sm border border-gray-100 flex justify-between items-center overflow-hidden">
               
               <!-- Bagian Kiri: Nomor, Nama, dan Tanggal -->
               <div class="flex items-center gap-3.5 flex-1 min-w-0">
-                <div class="w-10 h-10 min-w-[40px] rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 font-bold text-sm border border-emerald-100">
+                <div class="w-10 h-10 min-w-[40px] rounded-full ${warnaIkon} flex items-center justify-center font-bold text-sm border">
                   ${index + 1}
                 </div>
                 <div class="truncate">
@@ -692,13 +717,14 @@ document.getElementById('app-content').innerHTML = `
               
               <!-- Bagian Kanan: Nominal dan Jenis -->
               <div class="text-right flex-shrink-0 ml-3">
-                <p class="text-sm font-bold text-emerald-600">+ Rp ${t.nominal.toLocaleString('id-ID')}</p>
+                <p class="text-sm font-bold ${warnaTeks}">+ Rp ${t.nominal.toLocaleString('id-ID')}</p>
                 <p class="text-[9px] font-medium text-gray-400 mt-1 uppercase tracking-wider">${t.jenis}</p>
               </div>
               
             </div>
-          `).join('')}
+          `}).join('')}
         </div>
+	 
       </div>
     </div>
   `;
