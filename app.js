@@ -113,6 +113,12 @@ function renderDashboard(isBack = false) {
 
   const html = `
     <div class="fade-in px-5">
+      
+      <!-- TOMBOL BARU MENUJU PORTAL SANTRI -->
+      <a href="santri.html" class="flex justify-center items-center gap-2 w-full bg-teal-600 text-white font-bold py-3.5 rounded-2xl hover:bg-teal-700 transition shadow-md mb-5">
+        <i class="fas fa-external-link-alt"></i> Buka Portal Santri
+      </a>
+
       <div class="bg-white p-5 rounded-3xl shadow-sm border border-gray-100 mb-4 flex items-center gap-4">
         <div class="w-12 h-12 rounded-full bg-teal-100 text-teal-600 flex justify-center items-center text-xl"><i class="fas fa-users"></i></div>
         <div>
