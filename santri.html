@@ -45,7 +45,6 @@
   </style>
 </head>
 
-
 <body class="text-gray-800 font-sans antialiased">
 
   <div class="mobile-container pb-2">
@@ -93,11 +92,11 @@
       </div>
       <!-- ========================================== -->
 
-
       <!-- Kartu Statistik -->
       <div class="grid grid-cols-2 gap-3 mb-6">
         <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-3xl text-center shadow-sm">
-          <p class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-1">Sudah Lunas</p>
+          <!-- Sedikit mengubah label agar lebih informatif -->
+          <p class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider mb-1">Sudah Bayar</p>
           <h3 id="stat-lunas" class="text-3xl font-black text-emerald-700">0</h3>
         </div>
         <div class="bg-red-50 border border-red-100 p-4 rounded-3xl text-center shadow-sm">
@@ -105,7 +104,6 @@
           <h3 id="stat-belum" class="text-3xl font-black text-red-700">0</h3>
         </div>
       </div>
-
 	
 	<!-- Area Daftar Santri -->
       <div id="list-santri" class="flex flex-col gap-3"></div>
@@ -123,7 +121,6 @@
     </footer>
     <!-- ========================================== -->
 	
-	
   </div>
 
   <script>
@@ -131,7 +128,6 @@
     const API_URL = 'https://script.google.com/macros/s/AKfycbwrrDxMU9ubQITGHuyRnkxP4y7KcCB2chMNy6lqzefelnHdzfFbnTcnsdtVzrv7oT3ulg/exec';
     let appData = null;
     let tabAktif = 'Uang Ujian';
-
 
 // Fetch data saat halaman dibuka
     window.onload = async () => {
@@ -142,9 +138,7 @@
         document.getElementById('app-content').classList.remove('hidden');
         document.getElementById('app-content').classList.add('fade-in');
         
-        // --- TAMBAHKAN BARIS INI ---
         loadOpsiKelas(); 
-        // ---------------------------
         
         renderData('Uang Ujian');
       } catch (error) {
@@ -184,8 +178,7 @@
         tabUjian.className = "flex-1 py-3 text-xs font-bold rounded-xl transition-all duration-300 text-gray-500 hover:text-gray-700";
       }
 
-
-const setting = appData.setting || { tk_ujian: 50000, tk_rapor: 40000, ibt_ujian: 100000, ibt_rapor: 75000, sana_ujian: 150000, sana_rapor: 100000 };
+      const setting = appData.setting || { tk_ujian: 50000, tk_rapor: 40000, ibt_ujian: 100000, ibt_rapor: 75000, sana_ujian: 150000, sana_rapor: 100000 };
       
       // --- KODE BARU: Logika Filter Kelas ---
       const kelasDipilih = document.getElementById('filterKelas') ? document.getElementById('filterKelas').value : 'semua';
@@ -197,11 +190,9 @@ const setting = appData.setting || { tk_ujian: 50000, tk_rapor: 40000, ibt_ujian
       // --------------------------------------
       
       // Hitung Data
-      // PERHATIKAN: Ganti "appData.santri.map" menjadi "santriDifilter.map"
       const dataSantri = santriDifilter.map(s => {
         const kelasTeks = s.kelas.toUpperCase();
         let target = 0;
-
         
         if (jenisTagihan === 'Uang Ujian') {
           if (kelasTeks.includes('TK')) target = setting.tk_ujian;
@@ -213,33 +204,73 @@ const setting = appData.setting || { tk_ujian: 50000, tk_rapor: 40000, ibt_ujian
           else if (kelasTeks.includes('SANA')) target = setting.sana_rapor;
         }
 
-       const riwayat = appData.pembayaran.filter(p => 
-  p.nama.trim().toLowerCase() === s.nama.trim().toLowerCase() && 
-  p.jenis.trim().toLowerCase() === jenisTagihan.trim().toLowerCase()
-);
+        // PERBAIKAN: Cocokkan Nama DAN Kelas untuk mengatasi nama santri ganda
+        const riwayat = appData.pembayaran.filter(p => 
+          p.nama.trim().toLowerCase() === s.nama.trim().toLowerCase() && 
+          p.kelas.trim().toLowerCase() === s.kelas.trim().toLowerCase() && 
+          p.jenis.trim().toLowerCase() === jenisTagihan.trim().toLowerCase()
+        );
+        
         const totalBayar = riwayat.reduce((sum, p) => sum + p.nominal, 0);
         const sisa = target - totalBayar;
-        const status = sisa <= 0 ? 'Lunas' : 'Belum';
+
+        // PERBAIKAN: Penentuan Status Lunas, Nyicil, dan Belum
+        let status = 'Belum';
+        if (target > 0) {
+            if (sisa <= 0) {
+                status = 'Lunas';
+            } else if (totalBayar > 0 && sisa > 0) {
+                status = 'Nyicil';
+            }
+        }
+
         return { ...s, totalBayar, target, sisa, status };
       });
 
-      // Urutkan: Yang "Belum" di atas
+      // PERBAIKAN: Urutkan Berdasarkan Status (Belum -> Nyicil -> Lunas)
       dataSantri.sort((a, b) => {
-        if (a.status === 'Belum' && b.status === 'Lunas') return -1;
-        if (a.status === 'Lunas' && b.status === 'Belum') return 1;
+        const urutan = { 'Belum': 1, 'Nyicil': 2, 'Lunas': 3 };
+        if (urutan[a.status] !== urutan[b.status]) {
+            return urutan[a.status] - urutan[b.status];
+        }
         return a.nama.localeCompare(b.nama);
       });
 
-      // Update Statistik
-      const totalLunas = dataSantri.filter(s => s.status === 'Lunas').length;
+      // ========================================================
+      // UPDATE STATISTIK (DIPERBARUI SESUAI PERMINTAAN)
+      // Gabungkan santri status 'Lunas' ATAU 'Nyicil' ke kotak Hijau
+      // ========================================================
+      const totalLunas = dataSantri.filter(s => s.status === 'Lunas' || s.status === 'Nyicil').length;
       document.getElementById('stat-lunas').innerText = totalLunas;
+      
+      // Yang belum bayar sama sekali tetap di kotak Merah
       document.getElementById('stat-belum').innerText = dataSantri.length - totalLunas;
 
-      // Render List
-      document.getElementById('list-santri').innerHTML = dataSantri.map((s, idx) => `
+      // PERBAIKAN: Render List dengan Tampilan Status 'Nyicil'
+      document.getElementById('list-santri').innerHTML = dataSantri.map((s, idx) => {
+        let bgColor, badgeHTML;
+        
+        if (s.status === 'Lunas') {
+            bgColor = 'bg-emerald-50 text-emerald-600 border-emerald-100';
+            badgeHTML = `<span class="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider"><i class="fas fa-check-double mr-1"></i> LUNAS</span>`;
+        } else if (s.status === 'Nyicil') {
+            bgColor = 'bg-amber-50 text-amber-600 border-amber-100';
+            badgeHTML = `<div class="flex flex-col items-end">
+                  <span class="bg-amber-100 text-amber-700 px-3 py-1 rounded-lg text-[10px] font-bold mb-1 tracking-wider"><i class="fas fa-adjust mr-1"></i> NYICIL</span>
+                  <span class="text-[9px] font-bold text-gray-400">Kurang Rp ${s.sisa.toLocaleString('id-ID')}</span>
+                 </div>`;
+        } else {
+            bgColor = 'bg-red-50 text-red-500 border-red-100';
+            badgeHTML = `<div class="flex flex-col items-end">
+                  <span class="bg-red-100 text-red-700 px-3 py-1 rounded-lg text-[10px] font-bold mb-1 tracking-wider"><i class="fas fa-times mr-1"></i> BELUM</span>
+                  <span class="text-[9px] font-bold text-gray-400">Kurang Rp ${s.sisa.toLocaleString('id-ID')}</span>
+                 </div>`;
+        }
+
+        return `
         <div class="bg-white p-4 rounded-[20px] shadow-sm border border-gray-100 flex justify-between items-center overflow-hidden">
           <div class="flex items-center gap-3.5 flex-1 min-w-0">
-            <div class="w-10 h-10 min-w-[40px] rounded-full ${s.status === 'Lunas' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-500 border-red-100'} flex items-center justify-center font-bold text-sm border">
+            <div class="w-10 h-10 min-w-[40px] rounded-full ${bgColor} flex items-center justify-center font-bold text-sm border">
               ${idx + 1}
             </div>
             <div class="truncate">
@@ -248,16 +279,11 @@ const setting = appData.setting || { tk_ujian: 50000, tk_rapor: 40000, ibt_ujian
             </div>
           </div>
           <div class="text-right flex-shrink-0 ml-3">
-            ${s.status === 'Lunas' 
-              ? `<span class="bg-emerald-100 text-emerald-700 px-3 py-1.5 rounded-lg text-[10px] font-bold tracking-wider"><i class="fas fa-check-double mr-1"></i> LUNAS</span>`
-              : `<div class="flex flex-col items-end">
-                  <span class="bg-red-100 text-red-700 px-3 py-1 rounded-lg text-[10px] font-bold mb-1 tracking-wider"><i class="fas fa-times mr-1"></i> BELUM</span>
-                  <span class="text-[9px] font-bold text-gray-400">Kurang Rp ${s.sisa.toLocaleString('id-ID')}</span>
-                 </div>`
-            }
+            ${badgeHTML}
           </div>
         </div>
-      `).join('');
+      `;
+      }).join('');
     }
   </script>
 </body>

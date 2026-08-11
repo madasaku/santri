@@ -2,7 +2,6 @@
 const API_URL = 'https://script.google.com/macros/s/AKfycbwrPWOrKcPSdzxYXQ6Tkdc8z3qzVMj2rwszhPdqJgd9a-ADP8Iqyh2hfLos6t7UtB-iAw/exec';
 let appData = null;
 
-
 // ==========================================
 // SINKRONISASI TOMBOL KEMBALI (BACK) ANDROID
 // ==========================================
@@ -24,13 +23,11 @@ window.addEventListener('popstate', (e) => {
 
 const nativeSwalFire = Swal.fire;
 Swal.fire = function(...args) {
-  // Hanya tambah histori JIKA sebelumnya tidak ada popup sama sekali
   if (!document.body.classList.contains('swal2-shown')) {
     history.pushState({ isPopup: true }, "", location.hash || "#");
   }
   
   return nativeSwalFire.apply(this, args).then((result) => {
-    // Beri jeda 150ms. Jika berganti dari popup Loading ke Sukses, histori tidak akan dihapus
     setTimeout(() => {
       if (!document.body.classList.contains('swal2-shown') && history.state && history.state.isPopup) {
         history.back(); 
@@ -40,7 +37,6 @@ Swal.fire = function(...args) {
   });
 };
 
-// Pendaftaran Service Worker untuk PWA
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('sw.js')
     .then(reg => console.log('Service Worker terdaftar', reg))
@@ -48,24 +44,18 @@ if ('serviceWorker' in navigator) {
 }
 
 // ==========================================
-// KODE BARU: PENGATURAN PASSWORD SISTEM
+// PENGATURAN PASSWORD SISTEM
 // ==========================================
 const PIN_SISTEM = "112233"; // Silakan ganti PIN ini sesuai keinginan Anda
 
-// Fetch Data saat aplikasi dimuat (VERSI SELALU TERKUNCI)
 window.onload = async () => {
-  // Sistem akan langsung menahan layar dan memunculkan form login
   document.getElementById('login-screen').classList.remove('hidden');
 };
 
-// ==========================================
-// KODE BARU: FUNGSI PROSES VERIFIKASI
-// ==========================================
 function prosesLogin() {
   const password = document.getElementById('inputPassword').value;
   
   if (password === PIN_SISTEM) {
-    // Langsung buka aplikasi tanpa menyimpan jejak login di browser
     tampilkanAplikasiUtama();
   } else {
     Swal.fire({
@@ -74,12 +64,11 @@ function prosesLogin() {
       text: 'PIN yang Anda masukkan salah!',
       confirmButtonColor: '#0f766e'
     });
-    document.getElementById('inputPassword').value = ''; // Kosongkan form otomatis
+    document.getElementById('inputPassword').value = ''; 
   }
 }
 
 async function tampilkanAplikasiUtama() {
-  // Transisi UI dari Layar Kunci ke Aplikasi Utama
   document.getElementById('login-screen').classList.add('hidden');
   document.getElementById('main-app').classList.remove('hidden');
   
@@ -103,11 +92,9 @@ function renderDashboard(isBack = false) {
   const s = appData.statistik;
   const formatRupiah = (val) => val.toLocaleString('id-ID');
 
-  // Ambil data pengeluaran dari server (jika belum ada, set 0)
   const keluarUjian = s.pengeluaranUjian || 0;
   const keluarRapor = s.pengeluaranRapor || 0;
   
-  // Hitung Saldo Bersih
   const saldoUjian = s.pemasukanUjian - keluarUjian;
   const saldoRapor = s.pemasukanRapor - keluarRapor;
 
@@ -159,7 +146,6 @@ function renderDashboard(isBack = false) {
 let filterTingkat = 'Semua';
 
 function renderPembayaran(filterManual = null, isBack = false) {
-  // Tambahkan baris ini
   if (!isBack) history.pushState({ page: 'pembayaran' }, "", "#santri");
   
   updateNav(1);
@@ -168,17 +154,12 @@ function renderPembayaran(filterManual = null, isBack = false) {
   
   const uniqueClasses = [...new Set(appData.santri.map(s => s.kelas))].sort();
 
-  // 2. Terapkan Filter
   let dataSantri = appData.santri;
   if (filterTingkat !== 'Semua') {
-    // Ubah ke uppercase agar pencarian tidak sensitif huruf besar/kecil
     dataSantri = dataSantri.filter(s => s.kelas.toUpperCase().includes(filterTingkat.toUpperCase()));
   }
 
-// PERBAIKAN: Gunakan kurung kurawal agar bisa memanipulasi string
   const listHTML = dataSantri.map((s, index) => {
-    
-    // Mengamankan tanda kutip agar tidak memotong kode JavaScript
     const namaAman = s.nama.replace(/'/g, "\\'");
     const kelasAman = s.kelas.replace(/'/g, "\\'");
     
@@ -194,7 +175,8 @@ function renderPembayaran(filterManual = null, isBack = false) {
         </div>
       </div>
       
-      <button onclick="lihatRiwayat('${namaAman}', event)" class="text-[10px] bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full font-bold border border-blue-100 hover:bg-blue-500 hover:text-white transition-colors shadow-sm flex items-center gap-1 z-10">
+      <!-- PERBAIKAN: Melemparkan nama dan kelas agar tombol riwayat bebas duplikat -->
+      <button onclick="lihatRiwayat('${namaAman}', '${kelasAman}', event)" class="text-[10px] bg-blue-50 text-blue-600 px-3 py-1.5 rounded-full font-bold border border-blue-100 hover:bg-blue-500 hover:text-white transition-colors shadow-sm flex items-center gap-1 z-10">
         <i class="fas fa-history"></i> Riwayat
       </button>
       
@@ -277,11 +259,8 @@ function bukaFormPembayaran(nama = '', kelas = '') {
   });
 }
 
-// Fungsi ini bekerja real-time mendeteksi setiap ketikan keyboard
 function formatRupiah(input) {
-  // Hapus semua huruf/simbol, sisakan angka saja
   let angka = input.value.replace(/[^0-9]/g, '');
-  // Tambahkan titik setiap 3 digit
   input.value = angka.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
@@ -289,9 +268,9 @@ function formatRupiah(input) {
 // FUNGSI SIMPAN DATA (DENGAN AUTO-REFRESH & VALIDASI)
 // ==========================================
 async function simpanData() {
-  const namaInput = document.getElementById('swal-nama')?.value;
-  const kelasInput = document.getElementById('swal-kelas')?.value;
-  const jenisInput = document.getElementById('swal-jenis')?.value;
+  const namaInput = document.getElementById('swal-nama')?.value || "";
+  const kelasInput = document.getElementById('swal-kelas')?.value || "";
+  const jenisInput = document.getElementById('swal-jenis')?.value || "";
   const nominalInput = Number(document.getElementById('swal-nominal')?.value.replace(/\./g, ''));
 
   if (appData && appData.pembayaran) {
@@ -309,15 +288,20 @@ async function simpanData() {
       else if (kelasTeks.includes("SANA")) target = setting.sana_rapor;
     }
 
-    const riwayatSantri = appData.pembayaran.filter(p => p.nama === namaInput && p.jenis === jenisInput);
+    // PERBAIKAN: Menambahkan filter kelas agar validasi total terbayar lebih presisi
+    const riwayatSantri = appData.pembayaran.filter(p => 
+        p.nama.trim().toLowerCase() === namaInput.trim().toLowerCase() && 
+        p.kelas.trim().toLowerCase() === kelasInput.trim().toLowerCase() && 
+        p.jenis.trim().toLowerCase() === jenisInput.trim().toLowerCase()
+    );
     const totalTerbayar = riwayatSantri.reduce((sum, r) => sum + r.nominal, 0);
     
-    if (totalTerbayar >= target) {
+    if (totalTerbayar >= target && target > 0) {
       Swal.fire({ icon: 'error', title: 'Sudah Lunas!', html: `Santri <b>${namaInput}</b> sudah LUNAS untuk <b>${jenisInput}</b>.` });
       return;
     }
 
-    if ((totalTerbayar + nominalInput) > target) {
+    if ((totalTerbayar + nominalInput) > target && target > 0) {
       let sisa = target - totalTerbayar;
       Swal.fire({ icon: 'warning', title: 'Nominal Berlebih!', html: `Tagihan <b>${jenisInput}</b> tersisa <b>Rp ${sisa.toLocaleString('id-ID')}</b>. Jangan input lebih dari ini.` });
       return;
@@ -329,7 +313,6 @@ async function simpanData() {
     data: { nama: namaInput, kelas: kelasInput, jenis: jenisInput, nominal: nominalInput }
   };
 
-  // ANIMASI LOADING KEREN 1: Mengirim Data
   Swal.fire({ 
     title: 'Menyimpan Transaksi...', 
     html: 'Mohon tunggu, data sedang dikirim ke server.',
@@ -349,7 +332,6 @@ async function simpanData() {
     const result = JSON.parse(textResponse);
     
     if(result.success) {
-      // ANIMASI LOADING KEREN 2: Sinkronisasi Layar
       Swal.fire({ 
         title: 'Memperbarui Data...', 
         html: 'Transaksi berhasil! Menyinkronkan tampilan...',
@@ -358,10 +340,8 @@ async function simpanData() {
         didOpen: () => { Swal.showLoading() }
       });
       
-      // Ambil data baru secara diam-diam
       await muatUlangDataTanpaReload();
       
-      // Munculkan Centang Hijau (tanpa reload page!)
       Swal.fire({ 
         icon: 'success', 
         title: 'Sukses!', 
@@ -380,12 +360,23 @@ async function simpanData() {
 // ==========================================
 // FUNGSI LIHAT RIWAYAT (MENAMPILKAN SISA CICILAN)
 // ==========================================
-function lihatRiwayat(namaSantri, event) {
+// PERBAIKAN: Menerima argumen tambahan (kelasSantri)
+function lihatRiwayat(namaSantri, kelasSantri, event) {
   if (event) event.stopPropagation(); 
   if (!appData || !appData.pembayaran) return;
   
-  const riwayatSantri = appData.pembayaran.filter(p => p.nama === namaSantri);
-  const santri = appData.santri.find(s => s.nama === namaSantri);
+  // PERBAIKAN: Saring riwayat yang namanya DAN kelasnya sama
+  const riwayatSantri = appData.pembayaran.filter(p => 
+      p.nama.trim().toLowerCase() === namaSantri.trim().toLowerCase() &&
+      p.kelas.trim().toLowerCase() === kelasSantri.trim().toLowerCase()
+  );
+  
+  // PERBAIKAN: Cari data target santri berdasarkan nama DAN kelas
+  const santri = appData.santri.find(s => 
+      s.nama.trim().toLowerCase() === namaSantri.trim().toLowerCase() && 
+      s.kelas.trim().toLowerCase() === kelasSantri.trim().toLowerCase()
+  );
+  
   const kelas = santri ? santri.kelas.toUpperCase() : "";
   
   const setting = getPengaturanBiaya();
@@ -405,14 +396,14 @@ function lihatRiwayat(namaSantri, event) {
     <div class="bg-emerald-50 p-3 rounded-xl mb-4 border border-emerald-100 flex justify-between text-left shadow-sm">
       <div class="flex-1 border-r border-emerald-200 pr-2">
         <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Sisa Ujian</p>
-        <p class="text-sm font-bold ${sisaUjian <= 0 ? 'text-emerald-600' : 'text-red-500'}">
-          ${sisaUjian <= 0 ? '<i class="fas fa-check-circle"></i> LUNAS' : 'Rp ' + sisaUjian.toLocaleString('id-ID')}
+        <p class="text-sm font-bold ${sisaUjian <= 0 && targetUjian > 0 ? 'text-emerald-600' : 'text-red-500'}">
+          ${sisaUjian <= 0 && targetUjian > 0 ? '<i class="fas fa-check-circle"></i> LUNAS' : 'Rp ' + Math.max(0, sisaUjian).toLocaleString('id-ID')}
         </p>
       </div>
       <div class="flex-1 pl-3">
         <p class="text-[9px] font-bold text-gray-500 uppercase tracking-wider">Sisa Rapor</p>
-        <p class="text-sm font-bold ${sisaRapor <= 0 ? 'text-emerald-600' : 'text-red-500'}">
-          ${sisaRapor <= 0 ? '<i class="fas fa-check-circle"></i> LUNAS' : 'Rp ' + sisaRapor.toLocaleString('id-ID')}
+        <p class="text-sm font-bold ${sisaRapor <= 0 && targetRapor > 0 ? 'text-emerald-600' : 'text-red-500'}">
+          ${sisaRapor <= 0 && targetRapor > 0 ? '<i class="fas fa-check-circle"></i> LUNAS' : 'Rp ' + Math.max(0, sisaRapor).toLocaleString('id-ID')}
         </p>
       </div>
     </div>
@@ -441,7 +432,7 @@ function lihatRiwayat(namaSantri, event) {
   Swal.fire({
     title: `<div class="text-base text-gray-800 pt-2 font-bold"><i class="fas fa-history text-blue-500 mr-1"></i> Detail Pembayaran</div>`,
     html: `
-      <p class="text-xs text-gray-500 mb-3 font-bold border-b pb-2">${namaSantri}</p>
+      <p class="text-xs text-gray-500 mb-3 font-bold border-b pb-2">${namaSantri} <span class="block font-normal mt-1">${kelasSantri}</span></p>
       ${infoSisaPanel}
       <p class="text-[10px] font-bold text-gray-400 uppercase text-left mb-1 px-1">Riwayat Cicilan</p>
       <div class="max-h-56 overflow-y-auto hide-scroll bg-white p-3 rounded-2xl shadow-inner border border-gray-100">
@@ -452,7 +443,7 @@ function lihatRiwayat(namaSantri, event) {
     showConfirmButton: false,
     customClass: { popup: 'rounded-[32px] bg-gray-50' }
   });
-} // <---- INI ADALAH PENUTUP KURUNG KURAWAL YANG SEBELUMNYA HILANG!
+}
 
 // ==========================================
 // FUNGSI HAPUS (Dikeluarkan agar bisa diakses HTML)
@@ -480,7 +471,7 @@ async function kirimHapusKeServer(index) {
       method: 'POST',
       body: JSON.stringify({ action: 'hapus_pembayaran', data: { index: index } })
     });
-    location.reload(); // Refresh setelah hapus
+    location.reload(); 
   } catch (error) {
     Swal.fire('Error', 'Gagal menghapus data', 'error');
   }
@@ -609,7 +600,6 @@ async function kirimDataImportKeServer(dataSantri) {
 // FITUR LAPORAN & GRAFIK
 // ==========================================
 function renderLaporan(tabAktif = 'Uang Ujian', isBack = false) {
-  // Tambahkan baris ini
   if (!isBack) history.pushState({ page: 'laporan' }, "", "#laporan");
   
   updateNav(3); 
@@ -684,7 +674,6 @@ document.getElementById('app-content').innerHTML = `
      
 	 <div class="flex flex-col gap-3">
           ${dataTerfilter.map((t, index) => {
-            // 1. Ambil target biaya berdasarkan kelas dan jenis transaksi
             let target = 0;
             const kelasTeks = t.kelas.toUpperCase();
             if (t.jenis === 'Uang Ujian') {
@@ -697,20 +686,32 @@ document.getElementById('app-content').innerHTML = `
               else if (kelasTeks.includes('SANA')) target = settingBiaya.sana_rapor;
             }
 
-            // 2. Hitung total yang sudah dibayar santri ini untuk jenis transaksi tersebut (sampai saat ini)
+            // PERBAIKAN: Hitung total yang dibayar santri dengan menyertakan filter kelas (mencegah data ganda)
             const totalTerbayar = dataBayar
-              .filter(p => p.nama === t.nama && p.jenis === t.jenis)
+              .filter(p => 
+                  p.nama.trim().toLowerCase() === t.nama.trim().toLowerCase() && 
+                  p.kelas.trim().toLowerCase() === t.kelas.trim().toLowerCase() && 
+                  p.jenis.trim().toLowerCase() === t.jenis.trim().toLowerCase()
+              )
               .reduce((sum, p) => sum + p.nominal, 0);
 
-            // 3. Tentukan warna berdasarkan status lunas atau nyicil
-            const isLunas = totalTerbayar >= target;
-            const warnaTeks = isLunas ? 'text-emerald-600' : 'text-orange-500';
-            const warnaIkon = isLunas ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-orange-50 text-orange-500 border-orange-100';
+            // PERBAIKAN: Penyesuaian warna dan status (Lunas = Hijau, Nyicil = Kuning/Amber, Error/Target 0 = Merah)
+            let warnaTeks = 'text-red-500';
+            let warnaIkon = 'bg-red-50 text-red-500 border-red-100';
+            
+            if (target > 0) {
+                if (totalTerbayar >= target) {
+                    warnaTeks = 'text-emerald-600';
+                    warnaIkon = 'bg-emerald-50 text-emerald-600 border-emerald-100';
+                } else {
+                    warnaTeks = 'text-amber-500'; // Warna Nyicil yang sinkron
+                    warnaIkon = 'bg-amber-50 text-amber-600 border-amber-100';
+                }
+            }
 
             return `
             <div class="bg-white p-4 rounded-[20px] shadow-sm border border-gray-100 flex justify-between items-center overflow-hidden">
               
-              <!-- Bagian Kiri: Nomor, Nama, dan Tanggal -->
               <div class="flex items-center gap-3.5 flex-1">
                 <div class="w-10 h-10 min-w-[40px] rounded-full ${warnaIkon} flex items-center justify-center font-bold text-sm border">
                   ${index + 1}
@@ -721,7 +722,6 @@ document.getElementById('app-content').innerHTML = `
                 </div>
               </div>
               
-              <!-- Bagian Kanan: Nominal dan Jenis -->
               <div class="text-right flex-shrink-0 ml-3">
                 <p class="text-sm font-bold ${warnaTeks}">+ Rp ${t.nominal.toLocaleString('id-ID')}</p>
                 <p class="text-[9px] font-medium text-gray-400 mt-1 uppercase tracking-wider">${t.jenis}</p>
@@ -892,11 +892,9 @@ function bukaTransaksiCepat() {
   });
 }
 
-// Fungsi Pemasukan memanggil form lama Anda
 function bukaInputPemasukan() {
   Swal.close(); 
   setTimeout(() => {
-    // Isi dari fungsi bukaTransaksiCepat Anda yang lama dipindahkan ke sini
     if (!appData || !appData.santri) return;
     const uniqueClasses = [...new Set(appData.santri.map(s => s.kelas))].sort();
     let optionsKelas = '<option value="" disabled selected>-- Pilih Kelas --</option>';
@@ -930,10 +928,9 @@ function bukaInputPemasukan() {
         }
       }
     }).then((result) => { if (result.isConfirmed) simpanData(); });
-  }, 300); // Jeda agar transisi animasi mulus
+  }, 300); 
 }
 
-// Fungsi Form Baru untuk Pengeluaran
 function bukaInputPengeluaran() {
   Swal.close();
   setTimeout(() => {
@@ -971,7 +968,6 @@ function bukaInputPengeluaran() {
   }, 300);
 }
 
-// Proses Kirim ke Server
 async function prosesSimpanPengeluaran() {
   const kategori = document.getElementById('swal-kategori-keluar').value;
   const nominal = Number(document.getElementById('swal-nominal-keluar').value.replace(/\./g, ''));
@@ -983,21 +979,19 @@ async function prosesSimpanPengeluaran() {
   if (appData && appData.statistik) {
     let saldoTersedia = 0;
     
-    // Hitung saldo riil saat ini berdasarkan kategori yang dipilih
     if (kategori === "Uang Ujian") {
       saldoTersedia = (appData.statistik.pemasukanUjian || 0) - (appData.statistik.pengeluaranUjian || 0);
     } else if (kategori === "Uang Rapor") {
       saldoTersedia = (appData.statistik.pemasukanRapor || 0) - (appData.statistik.pengeluaranRapor || 0);
     }
 
-    // Jika nominal pengeluaran lebih besar dari saldo yang ada, blokir!
     if (nominal > saldoTersedia) {
       Swal.fire({
         icon: 'error',
         title: 'Saldo Tidak Cukup!',
         html: `Saldo Kas <b>${kategori}</b> saat ini hanya <b>Rp ${saldoTersedia.toLocaleString('id-ID')}</b>.<br>Penarikan dibatalkan agar kas tidak minus.`
       });
-      return; // Hentikan kode agar data tidak terkirim ke server
+      return; 
     }
   }
   // ==========================================
@@ -1007,7 +1001,6 @@ async function prosesSimpanPengeluaran() {
     data: { kategori: kategori, nominal: nominal, keterangan: keterangan }
   };
 
-  // LOADING 1
   Swal.fire({ 
     title: 'Mencatat Pengeluaran...', 
     html: 'Mohon tunggu, menyinkronkan dengan server.',
@@ -1025,7 +1018,6 @@ async function prosesSimpanPengeluaran() {
     
     const result = await response.json();
     if(result.success) {
-      // LOADING 2
       Swal.fire({ 
         title: 'Memperbarui Saldo...', 
         allowOutsideClick: false, 
@@ -1033,7 +1025,6 @@ async function prosesSimpanPengeluaran() {
         didOpen: () => Swal.showLoading() 
       });
       
-      // Panggil fungsi siluman
       await muatUlangDataTanpaReload();
       
       Swal.fire({ icon: 'success', title: 'Sukses', text: result.message, timer: 1500, showConfirmButton: false });
@@ -1051,18 +1042,15 @@ async function prosesSimpanPengeluaran() {
 function updateDropdownSantri(kelasTerpilih) {
   const selectNama = document.getElementById('swal-nama');
   
-  // Saring santri yang hanya ada di kelas terpilih, lalu urutkan sesuai abjad
   const santriFilter = appData.santri
     .filter(s => s.kelas === kelasTerpilih)
     .sort((a, b) => a.nama.localeCompare(b.nama));
   
-  // Kosongkan dan isi ulang pilihan nama
   selectNama.innerHTML = '<option value="" disabled selected>-- Pilih Nama Santri --</option>';
   santriFilter.forEach(s => {
     selectNama.innerHTML += `<option value="${s.nama}">${s.nama}</option>`;
   });
   
-  // Nyalakan kotak input (hapus blokir disabled)
   selectNama.disabled = false;
   selectNama.classList.remove('bg-gray-100', 'cursor-not-allowed');
   selectNama.classList.add('bg-white', 'cursor-pointer');
@@ -1076,7 +1064,6 @@ async function muatUlangDataTanpaReload() {
     const response = await fetch(API_URL);
     appData = await response.json();
     
-    // Render ulang antarmuka yang sedang terbuka saja
     const hash = location.hash;
     if (hash === '#santri') renderPembayaran(filterTingkat, true);
     else if (hash === '#laporan') renderLaporan('Uang Ujian', true);
